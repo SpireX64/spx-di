@@ -1,9 +1,32 @@
 {
   "name": "spx-di",
   "version": "1.0.0",
-  "description": "Dependency injection library",
-  "repository": "https://github.com/SpireX64/spx-di",
-  "author": "Artem Sobolenkov (SpireX)",
   "license": "MIT",
-  "private": false
+  "author": "Artem Sobolenkov (SpireX)",
+  "repository": "https://github.com/SpireX64/spx-di",
+  "description": "Dependency injection library for JS/TS projects",
+  "private": false,
+  "keywords": [
+    "node",
+    "javascript",
+    "typescript",
+    "ioc",
+    "di",
+    "dependency injection",
+    "dependency inversion",
+    "inversion of control"
+  ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rm -r lib"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.5",
+    "jest": "^29.4.3",
+    "ts-jest": "^29.0.5",
+    "@types/jest": "^29.4.0"
+  }
 }
