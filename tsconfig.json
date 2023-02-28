@@ -1,15 +1,11 @@
 {
   "compilerOptions": {
     "baseUrl": "./",
-    "sourceRoot": "./src",
-    "outDir": "./lib",
     "target": "esnext",
     "module": "ESNext",
     "moduleResolution": "Node",
+    "isolatedModules": true,
     "esModuleInterop": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
     "allowJs": false,
     "removeComments": true,
     "emitBOM": false,
@@ -30,6 +26,5 @@
     "noImplicitOverride": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "lib"]
 }
