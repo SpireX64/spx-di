@@ -1,5 +1,5 @@
 import DIContainer from '../src/DIContainer'
-import BindingNotFoundDIError from '../src/BindingNotFoundDIError'
+import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {

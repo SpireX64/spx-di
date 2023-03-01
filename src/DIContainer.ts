@@ -1,8 +1,8 @@
 import IEntityBinding from './IEntityBinding'
 import { TInstanceFactory } from './types'
-import DIError from './DIError'
-import BindingNotFoundDIError from './BindingNotFoundDIError'
-import NullableBindingDIError from './NullableBindingDIError'
+import DIError from './errors/DIError'
+import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
+import NullableBindingDIError from './errors/NullableBindingDIError'
 
 export default class DIContainer<TypeMap extends object> {
     private readonly _bindingsMap: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>

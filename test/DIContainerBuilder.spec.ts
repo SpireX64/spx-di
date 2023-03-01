@@ -1,5 +1,5 @@
 import DIContainer, { DIContainerBuilder } from '../src/DIContainer'
-import NullableBindingDIError from '../src/NullableBindingDIError'
+import NullableBindingDIError from '../src/errors/NullableBindingDIError'
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {
