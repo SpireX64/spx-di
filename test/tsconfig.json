@@ -1,12 +1,12 @@
 {
     "extends": "../tsconfig.json",
     "include": [
-        "./**/*.ts",
+        "./**/*.ts"
     ],
     "references": [
         {
             "path": "../src/",
-            "prepend": true,
+            "prepend": true
         }
     ],
     "compilerOptions": {

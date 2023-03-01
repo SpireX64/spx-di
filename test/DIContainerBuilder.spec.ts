@@ -1,4 +1,5 @@
-import DIContainer, {DIContainerBuilder} from '../src/DIContainer'
+import DIContainer, { DIContainerBuilder } from '../src/DIContainer'
+import NullableBindingDIError from '../src/NullableBindingDIError'
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {
@@ -63,5 +64,40 @@ describe('DIContainerBuilder', () => {
         expect(binding?.type).toBe('typeKey')
         expect(binding?.factory).toBe(factory)
         expect(binding?.instance).toBeNull()
+    })
+
+    it('Force nullable instance binding', () => {
+        // Arrange -----
+        const builder = DIContainer.builder<{ typeKey: string }>()
+        let error: NullableBindingDIError | null = null
+
+        // Act ---------
+        try {
+            builder.bindInstance('typeKey', null!)
+        } catch (e) {
+            if (e instanceof NullableBindingDIError)
+                error = e
+        }
+
+        // Assert
+        expect(error).not.toBeNull()
+        expect(error?.type).toBe('typeKey')
+    })
+
+    it('Force nullable factory binding', () => {
+        // Arrange -----
+        const builder = DIContainer.builder<{ typeKey: string }>()
+        let error: NullableBindingDIError | null = null
+
+        // Act ---------
+        try {
+            builder.bindFactory('typeKey', null!)
+        } catch (e) {
+            if (e instanceof NullableBindingDIError)
+                error = e
+        }
+        // Assert ------
+        expect(error).not.toBeNull()
+        expect(error?.type).toBe('typeKey')
     })
 });
