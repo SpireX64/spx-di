@@ -1,4 +1,5 @@
 import IEntityBinding from './IEntityBinding'
+import { TInstanceFactory } from './types'
 
 export default class DIContainer {
     public static builder<TypeMap extends object>(){
@@ -13,8 +14,19 @@ export class DIContainerBuilder<TypeMap extends object> {
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             instance,
+            factory: null,
         }
-        this.addBinding(type, binding)
+        this.bind(type, binding)
+        return this
+    }
+
+    public bindFactory<Type extends keyof TypeMap>(type: Type, factory: TInstanceFactory<TypeMap, Type>): DIContainerBuilder<TypeMap> {
+        const binding: IEntityBinding<TypeMap, Type> = {
+            type,
+            factory,
+            instance: null,
+        }
+        this.bind(type, binding)
         return this
     }
 
@@ -28,7 +40,7 @@ export class DIContainerBuilder<TypeMap extends object> {
         return new DIContainer()
     }
 
-    private addBinding<Type extends keyof TypeMap>(type: Type, binding: IEntityBinding<TypeMap, Type>): void {
+    private bind<Type extends keyof TypeMap>(type: Type, binding: IEntityBinding<TypeMap, Type>): void {
         this._bindingsMap.set(type, binding)
     }
 }
