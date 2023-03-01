@@ -1,29 +1,23 @@
 import IEntityBinding from './IEntityBinding'
 import { TInstanceFactory } from './types'
-import DIError from './errors/DIError'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
+import EntityActivator from './EntityActivator'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
-    private readonly _bindingsMap: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>
+    private readonly _activator: EntityActivator<TypeMap>
 
-    public constructor(bindings: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>) {
-        this._bindingsMap = bindings
+    public constructor(activator: EntityActivator<TypeMap>) {
+        this._activator = activator
     }
 
     public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
-        const binding = this._bindingsMap.get(type) as IEntityBinding<TypeMap, Type> | null
+        const binding = this._activator.findBinding(type)
         if (binding == null)
             throw new BindingNotFoundDIError(type.toString())
 
-        if (binding.instance != null)
-            return binding.instance
-
-        if (binding.factory != null)
-            return binding.factory(this)
-
-        throw new DIError(`Unexpected nullable binding`)
+        return this._activator.activate(this, binding)
     }
 
     public static builder<TypeMap extends object>(){
@@ -65,7 +59,8 @@ export class DIContainerBuilder<TypeMap extends object> {
     }
 
     public build(): DIContainer<TypeMap> {
-        return new DIContainer(this._bindingsMap)
+        const activator = new EntityActivator(this._bindingsMap)
+        return new DIContainer(activator)
     }
 
     private bind<Type extends keyof TypeMap>(type: Type, binding: IEntityBinding<TypeMap, Type>): void {
