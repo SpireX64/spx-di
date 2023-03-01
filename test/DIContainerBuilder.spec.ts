@@ -66,6 +66,28 @@ describe('DIContainerBuilder', () => {
         expect(binding?.instance).toBeNull()
     })
 
+    it('Factory binding with dependency', () => {
+        // Arrange -----
+        const builder = DIContainer.builder<{
+            originValue: number,
+            factoryValue: number
+        }>()
+        const factory = jest.fn(r => r.get('originValue'))
+
+        // Act ---------
+        builder
+            .bindInstance('originValue', 10)
+            .bindFactory('factoryValue', factory)
+
+        const factoryBinding = builder.getBindingOfType('factoryValue')
+
+        // Assert ------
+        expect(factoryBinding).not.toBeNull()
+        expect(factoryBinding?.type).toBe('factoryValue')
+        expect(factoryBinding?.factory).toBe(factory)
+        expect(factoryBinding?.instance).toBeNull()
+    })
+
     it('Force nullable instance binding', () => {
         // Arrange -----
         const builder = DIContainer.builder<{ typeKey: string }>()

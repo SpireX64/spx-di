@@ -50,4 +50,27 @@ describe('DIContainer', function () {
         expect(value).toBe(expectedValue)
         expect(factory.mock.calls.length).toBe(1)
     })
+
+    it('Get value by factory with dependency', () => {
+        // Arrange -----
+        const originValue = 32
+        const addendum = 10
+        const expectedValue = originValue + addendum
+
+        const factory = jest.fn(r => r.get('origin') + addendum)
+        const container = DIContainer.builder<{
+            origin: number,
+            value: number,
+        }>()
+            .bindInstance('origin', originValue)
+            .bindFactory('value', factory)
+            .build()
+
+        // Act --------
+        const value = container.get('value')
+
+        // Assert -----
+        expect(value).toBe(expectedValue)
+        expect(factory.mock.calls.length).toBe(1)
+    })
 })

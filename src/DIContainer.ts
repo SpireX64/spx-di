@@ -3,8 +3,9 @@ import { TInstanceFactory } from './types'
 import DIError from './errors/DIError'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
+import IDependencyResolver from './IDepencencyResolver'
 
-export default class DIContainer<TypeMap extends object> {
+export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _bindingsMap: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>
 
     public constructor(bindings: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>) {
@@ -20,7 +21,7 @@ export default class DIContainer<TypeMap extends object> {
             return binding.instance
 
         if (binding.factory != null)
-            return binding.factory()
+            return binding.factory(this)
 
         throw new DIError(`Unexpected nullable binding`)
     }
