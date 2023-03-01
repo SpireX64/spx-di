@@ -1,14 +1,15 @@
 import IEntityBinding from '../src/IEntityBinding'
-import IDependencyResolver from '../lib/IDepencencyResolver'
+import IDependencyResolver from '../src/IDepencencyResolver'
+import DIContainer from '../src/DIContainer'
 import EntityActivator from '../src/EntityActivator'
 import NullableBindingDIError from '../src/errors/NullableBindingDIError'
-import DIContainer from '../src/DIContainer'
 import DependencyCycleDIError from '../src/errors/DependencyCycleDIError'
+import { Lifecycle } from '../src/types'
 
 describe('EntityActivator', () => {
     it('Get binding of type', () => {
         // Arrange -----------
-        const expectedBinding = { type: 'value', instance: 10 }
+        const expectedBinding = { type: 'value', lifecycle: Lifecycle.SINGLETON, instance: 10, }
         const bindingsMap = new Map([
             [expectedBinding.type, expectedBinding],
         ])
@@ -36,7 +37,7 @@ describe('EntityActivator', () => {
     it('Try activate empty binding', () => {
         // Arrange -------------
         const bindingsMap = new Map([
-            [ 'value', { type: 'value' } ],
+            ['value', { type: 'value', lifecycle: Lifecycle.SINGLETON }],
         ])
         const resolver: IDependencyResolver<{ value: string }> = {
             get: jest.fn()
@@ -61,8 +62,8 @@ describe('EntityActivator', () => {
     it('Short dependency cycle', () => {
         // Arrange --------------
         const bindingsMap = new Map([
-            ['A', { type: 'A', factory: (r: IDependencyResolver<any>) => r.get('B') }],
-            ['B', { type: 'B', factory: (r: IDependencyResolver<any>) => r.get('A') }],
+            ['A', { type: 'A', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('B') }],
+            ['B', { type: 'B', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('A') }],
         ])
         const activator = new EntityActivator(bindingsMap)
         const container = new DIContainer(activator)
@@ -85,11 +86,11 @@ describe('EntityActivator', () => {
     it('Long dependency cycle', () => {
         // Arrange --------------
         const bindingsMap = new Map([
-            ['A', { type: 'A', factory: (r: IDependencyResolver<any>) => r.get('B') }],
-            ['B', { type: 'B', factory: (r: IDependencyResolver<any>) => r.get('C') }],
-            ['C', { type: 'C', factory: (r: IDependencyResolver<any>) => r.get('D') }],
-            ['D', { type: 'D', factory: (r: IDependencyResolver<any>) => r.get('E') }],
-            ['E', { type: 'E', factory: (r: IDependencyResolver<any>) => r.get('A') }],
+            ['A', { type: 'A', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('B') }],
+            ['B', { type: 'B', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('C') }],
+            ['C', { type: 'C', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('D') }],
+            ['D', { type: 'D', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('E') }],
+            ['E', { type: 'E', lifecycle: Lifecycle.SINGLETON, factory: (r: IDependencyResolver<any>) => r.get('A') }],
         ])
         const activator = new EntityActivator(bindingsMap)
         const container = new DIContainer(activator)

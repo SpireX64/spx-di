@@ -1,5 +1,5 @@
 import IEntityBinding from './IEntityBinding'
-import { TInstanceFactory } from './types'
+import { Lifecycle, TInstanceFactory } from './types'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
@@ -7,6 +7,7 @@ import EntityActivator from './EntityActivator'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
+    private readonly _singletonsMap = new Map<keyof TypeMap, TypeMap[keyof TypeMap]>()
 
     public constructor(activator: EntityActivator<TypeMap>) {
         this._activator = activator
@@ -17,7 +18,20 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         if (binding == null)
             throw new BindingNotFoundDIError(type.toString())
 
-        return this._activator.activate(this, binding)
+        if (binding.instance != null)
+            return binding.instance
+
+        if (binding.lifecycle === Lifecycle.SINGLETON) {
+            const instance = this._singletonsMap.get(type)
+            if (instance != null)
+                return instance as TypeMap[Type]
+        }
+
+        const activatedInstance = this._activator.activate(this, binding)
+        if (binding.lifecycle === Lifecycle.SINGLETON) {
+            this._singletonsMap.set(type, activatedInstance)
+        }
+        return activatedInstance
     }
 
     public static builder<TypeMap extends object>(){
@@ -33,6 +47,7 @@ export class DIContainerBuilder<TypeMap extends object> {
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
+            lifecycle: Lifecycle.SINGLETON,
             instance,
             factory: null,
         }
@@ -40,11 +55,16 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this
     }
 
-    public bindFactory<Type extends keyof TypeMap>(type: Type, factory: TInstanceFactory<TypeMap, Type>): DIContainerBuilder<TypeMap> {
+    public bindFactory<Type extends keyof TypeMap>(
+        type: Type,
+        factory: TInstanceFactory<TypeMap, Type>,
+        lifecycle = Lifecycle.SINGLETON,
+    ): DIContainerBuilder<TypeMap> {
         if (factory == null)
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
+            lifecycle,
             factory,
             instance: null,
         }

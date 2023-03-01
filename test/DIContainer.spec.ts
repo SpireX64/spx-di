@@ -1,5 +1,6 @@
 import DIContainer from '../src/DIContainer'
 import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
+import { Lifecycle } from '../src/types'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {
@@ -72,5 +73,47 @@ describe('DIContainer', function () {
         // Assert -----
         expect(value).toBe(expectedValue)
         expect(factory.mock.calls.length).toBe(1)
+    })
+
+    it('Transient lifecycle', () => {
+        // Arrange -------
+        const factory = jest.fn(() => new Object())
+
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', factory, Lifecycle.TRANSIENT)
+            .build()
+
+        // Act -----------
+        const object1 = container.get('typeKey')
+        const object2 = container.get('typeKey')
+        const object3 = container.get('typeKey')
+
+        // Assert --------
+        expect(factory.mock.calls.length).toBe(3)
+        expect(object2).not.toBe(object1)
+        expect(object3).not.toBe(object1)
+    })
+
+    it('Singleton lifecycle', () => {
+        // Arrange -------
+        const singletonFactory = jest.fn(() => new Object())
+
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', singletonFactory)
+            .build()
+
+        // Act -----------
+        const object1 = container.get('typeKey')
+        const object2 = container.get('typeKey')
+        const object3 = container.get('typeKey')
+
+        // Assert --------
+        expect(singletonFactory.mock.calls.length).toBe(1)
+        expect(object2).toBe(object1)
+        expect(object3).toBe(object1)
     })
 })

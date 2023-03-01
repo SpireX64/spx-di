@@ -1,5 +1,6 @@
-import DIContainer, { DIContainerBuilder } from '../src/DIContainer'
+import DIContainer, {DIContainerBuilder} from '../src/DIContainer'
 import NullableBindingDIError from '../src/errors/NullableBindingDIError'
+import {Lifecycle} from '../src/types'
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {
@@ -44,6 +45,7 @@ describe('DIContainerBuilder', () => {
         // Assert -----
         expect(outBuilder).toBe(builder)
         expect(binding).not.toBeNull()
+        expect(binding?.lifecycle).toBe(Lifecycle.SINGLETON)
         expect(binding?.type).toBe('value')
         expect(binding?.instance).toBe(expectedValue)
         expect(binding?.factory).toBeNull()
@@ -61,6 +63,7 @@ describe('DIContainerBuilder', () => {
         // Assert -----
         expect(outBuilder).toBe(builder)
         expect(binding).not.toBeNull()
+        expect(binding?.lifecycle).toBe(Lifecycle.SINGLETON)
         expect(binding?.type).toBe('typeKey')
         expect(binding?.factory).toBe(factory)
         expect(binding?.instance).toBeNull()
@@ -86,6 +89,24 @@ describe('DIContainerBuilder', () => {
         expect(factoryBinding?.type).toBe('factoryValue')
         expect(factoryBinding?.factory).toBe(factory)
         expect(factoryBinding?.instance).toBeNull()
+    })
+
+    it('Factory binding with lifecycle override', () => {
+        // Arrange ----
+        const builder = DIContainer.builder<{ typeKey: string }>()
+        const factory = jest.fn(() => 'test')
+
+        // Act --------
+        const outBuilder = builder.bindFactory('typeKey', factory, Lifecycle.TRANSIENT)
+        const binding = builder.getBindingOfType('typeKey')
+
+        // Assert -----
+        expect(outBuilder).toBe(builder)
+        expect(binding).not.toBeNull()
+        expect(binding?.lifecycle).toBe(Lifecycle.TRANSIENT)
+        expect(binding?.type).toBe('typeKey')
+        expect(binding?.factory).toBe(factory)
+        expect(binding?.instance).toBeNull()
     })
 
     it('Force nullable instance binding', () => {
