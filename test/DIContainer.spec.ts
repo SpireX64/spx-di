@@ -370,4 +370,21 @@ describe('DIContainer', function () {
         expect(valueB1).toBe(expectedValueB)
         expect(valueB2).toBe(expectedValueB)
     })
+
+    it('Get all instances', () => {
+        // Arrange --------
+        const container = DIContainer.builder<{ typeKey: number }>()
+            .bindInstance('typeKey', 10)
+            .bindInstance('typeKey', 146)
+            .bindFactory('typeKey', () => 42)
+            .build()
+
+        // Act ------------
+        const values = container.getAll('typeKey')
+
+        // Assert ---------
+        expect(values).toContain(10)
+        expect(values).toContain(146)
+        expect(values).toContain(42)
+    })
 })

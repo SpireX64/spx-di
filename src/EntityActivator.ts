@@ -18,6 +18,13 @@ export default class EntityActivator<TypeMap extends object> {
         return binding as IEntityBinding<TypeMap, Type>
     }
 
+    public findAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<IEntityBinding<TypeMap, Type>> {
+        const bindings = this._bindings.filter(it => it.type === type && it.name == name)
+        // @ts-ignore
+        return bindings as ReadonlyArray<IEntityBinding<TypeMap, Type>>
+    }
+
+
     public activate<Type extends keyof TypeMap>(
         resolver: IDependencyResolver<TypeMap>,
         binding: IEntityBinding<TypeMap, Type>,

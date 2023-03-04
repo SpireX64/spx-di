@@ -76,6 +76,24 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         return instance
     }
 
+    public getAll<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<TypeMap[Type]> {
+        if (this._isClosed)
+            throw new ClosedScopeDIError(this.key)
+
+        if (this._parent != null)
+            return this._parent.getAll(type, name)
+
+        const bindings = this._activator.findAllBindingsOf(type, name)
+        if (bindings.length === 0) return []
+        if (bindings.length === 1) {
+            return Array.of(this.get(type, name))
+        }
+
+        const instances = bindings.filter(it => it != null).map(it => it.instance) as TypeMap[Type][]
+        const activatedInstances = (this._scopedInstancesMap.get(type)?.get(name) ?? []) as TypeMap[Type][]
+        return instances.concat(activatedInstances)
+    }
+
     public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {
         const scope = this
 
