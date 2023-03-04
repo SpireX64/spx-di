@@ -1,4 +1,4 @@
-import {Lifecycle, TProvider, TScopeKey} from './types'
+import { Lifecycle, TBindingName, TProvider, TScopeKey } from './types'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
@@ -9,7 +9,10 @@ import { createLazyInstance } from './ILazyInstance'
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
     private readonly _parent: DIScope<TypeMap> | null
-    private readonly _scopedInstancesMap = new Map<keyof TypeMap, TypeMap[keyof TypeMap]>()
+    private readonly _scopedInstancesMap = new Map<
+        keyof TypeMap,
+        Map<TBindingName, TypeMap[keyof TypeMap][]>
+    >()
     private _isClosed = false
 
     public constructor(
@@ -38,19 +41,25 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
 
         let instance: TypeMap[Type] | undefined
         if (allowInheritedGet) {
-            instance = this._parent?.get(binding.type)
+            instance = this._parent?.get(binding.type, binding.name)
             if (instance != null)
                 return instance as TypeMap[Type]
         }
 
-        return this._scopedInstancesMap.get(binding.type) as TypeMap[Type]
+        const typeGroup = this._scopedInstancesMap.get(binding.type)
+        if (!typeGroup) return null
+
+        const instances = typeGroup.get(binding.name)
+        if (!instances || instances.length == 0) return null
+
+        return instances[0] as TypeMap[Type]
     }
 
-    public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
+    public get<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         if (this._isClosed)
             throw new ClosedScopeDIError(this.key)
 
-        const binding = this._activator.findBinding(type)
+        const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
             throw new BindingNotFoundDIError(type.toString())
 
@@ -62,18 +71,18 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
 
         instance = this._activator.activate(this, binding)
         if (binding.lifecycle !== Lifecycle.Transient) {
-            this._scopedInstancesMap.set(type, instance)
+            this.pushInstance(binding, instance)
         }
         return instance
     }
 
-    public getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {
+    public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {
         const scope = this
 
         function provider() {
             if (scope.isClosed)
                 throw new ClosedScopeDIError(scope.key)
-            return scope.get(type)
+            return scope.get(type, name)
         }
 
         const providerName = `provide_${type.toString()}_${scope.key.toString()}`
@@ -81,8 +90,8 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         return provider
     }
 
-    public getLazy<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
-        const binding = this._activator.findBinding(type)
+    public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+        const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
             throw new BindingNotFoundDIError(type.toString())
 
@@ -102,10 +111,34 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         this._scopedInstancesMap.clear()
     }
 
+    private pushInstance<Type extends keyof TypeMap>(
+        binding: IEntityBinding<TypeMap, Type>,
+        instance: TypeMap[Type],
+    ): void {
+        let typeGroup = this._scopedInstancesMap.get(binding.type)
+        let instancesList: TypeMap[Type][]
+        if (typeGroup == null) {
+            typeGroup = new Map()
+            instancesList = []
+            typeGroup.set(binding.name, instancesList)
+            this._scopedInstancesMap.set(binding.type, typeGroup)
+
+        } else {
+            const list = typeGroup.get(binding.name)
+            if (list == null) {
+                instancesList = []
+                typeGroup.set(binding.name, instancesList)
+            } else {
+                instancesList = list as TypeMap[Type][]
+            }
+        }
+        instancesList.push(instance)
+    }
+
     private activateSingletons(): void {
         this._activator.activateSingletons(this)
             .forEach((instance, binding) => {
-                this._scopedInstancesMap.set(binding.type, instance)
+                this.pushInstance(binding, instance)
             })
     }
 }

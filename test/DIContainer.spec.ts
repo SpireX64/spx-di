@@ -344,4 +344,30 @@ describe('DIContainer', function () {
 
         expect(lazySingletonFactory.mock.calls.length).toBe(1) // Lazy singleton instance re-used
     })
+
+    it('Resolve named instances', () => {
+        // Arrange -------
+        const expectedDefaultValue = 11
+        const expectedValueA = 22
+        const expectedValueB = 33
+        const container = DIContainer.builder<{ typeKey: number }>()
+            .bindInstance('typeKey', expectedDefaultValue)
+            .bindInstance('typeKey', expectedValueA, 'A')
+            .bindInstance('typeKey', expectedValueB, 'B')
+            .build()
+
+        // Act -----------
+        const value = container.get('typeKey')
+        const valueA1 = container.get('typeKey', 'A')
+        const valueA2 = container.get('typeKey', 'A')
+        const valueB1 = container.get('typeKey', 'B')
+        const valueB2 = container.get('typeKey', 'B')
+
+        // Assert --------
+        expect(value).toBe(expectedDefaultValue)
+        expect(valueA1).toBe(expectedValueA)
+        expect(valueA2).toBe(expectedValueA)
+        expect(valueB1).toBe(expectedValueB)
+        expect(valueB2).toBe(expectedValueB)
+    })
 })

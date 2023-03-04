@@ -2,19 +2,20 @@ import IEntityBinding from './IEntityBinding'
 import IDependencyResolver from './IDepencencyResolver'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import DependencyCycleDIError from './errors/DependencyCycleDIError'
-import { Lifecycle } from './types'
+import {Lifecycle, TBindingName, TReadonlyBindingsList} from './types'
 
 export default class EntityActivator<TypeMap extends object> {
-    private readonly _bindings: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>
+    private readonly _bindings: TReadonlyBindingsList<TypeMap>
     private _activationChain: IEntityBinding<TypeMap, keyof TypeMap>[] = []
 
-    public constructor(bindings: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>) {
+    public constructor(bindings: TReadonlyBindingsList<TypeMap>) {
         this._bindings = bindings
     }
 
-    public findBinding<Type extends keyof TypeMap>(type: Type): IEntityBinding<TypeMap, Type> | null {
-        const binding = this._bindings.get(type) as IEntityBinding<TypeMap, Type>
-        return binding ?? null
+    public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
+        const binding = this._bindings.find(it => it.type === type && it.name == name)
+        if (!binding) return null
+        return binding as IEntityBinding<TypeMap, Type>
     }
 
     public activate<Type extends keyof TypeMap>(
@@ -44,12 +45,12 @@ export default class EntityActivator<TypeMap extends object> {
         resolver: IDependencyResolver<TypeMap>,
     ): ReadonlyMap<IEntityBinding<TypeMap, keyof TypeMap>, TypeMap[keyof TypeMap]> {
         const activatedInstancesMap = new Map<IEntityBinding<TypeMap, keyof TypeMap>, TypeMap[keyof TypeMap]>()
-        this._bindings.forEach(binding => {
-            if (binding.lifecycle === Lifecycle.Singleton && binding.instance == null) {
+        this._bindings
+            .filter(binding => binding.lifecycle === Lifecycle.Singleton && binding.instance == null)
+            .forEach(binding => {
                 const instance = this.activate(resolver, binding)
                 activatedInstancesMap.set(binding, instance)
-            }
-        })
+            })
         return activatedInstancesMap
     }
 }

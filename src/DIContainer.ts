@@ -1,9 +1,16 @@
 import IEntityBinding from './IEntityBinding'
-import { Lifecycle, TInstanceFactory, TProvider, TScopeKey } from './types'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
 import DIScope from './DIScope'
+import {
+    Lifecycle,
+    TBindingName,
+    TBindingsList,
+    TInstanceFactory,
+    TProvider,
+    TScopeKey,
+} from './types'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     public static globalScopeKey: TScopeKey = Symbol('global')
@@ -17,16 +24,16 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         this._scopes.set(this._globalScope.key, this._globalScope)
     }
 
-    public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
-        return this._globalScope.get(type)
+    public get<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+        return this._globalScope.get(type, name)
     }
 
-    public getLazy<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
-        return this._globalScope.getLazy(type);
+    public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+        return this._globalScope.getLazy(type, name);
     }
 
-    public getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {
-        return this._globalScope.getProvider(type)
+    public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {
+        return this._globalScope.getProvider(type, name)
     }
 
     public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
@@ -55,18 +62,23 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
 }
 
 export class DIContainerBuilder<TypeMap extends object> {
-    private readonly _bindingsMap = new Map<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>()
+    private readonly _bindings: TBindingsList<TypeMap> = []
 
-    public bindInstance<Type extends keyof TypeMap>(type: Type, instance: TypeMap[Type]): DIContainerBuilder<TypeMap> {
+    public bindInstance<Type extends keyof TypeMap>(
+        type: Type,
+        instance: TypeMap[Type],
+        name: TBindingName = null,
+    ): DIContainerBuilder<TypeMap> {
         if (instance == null)
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
+            name,
             lifecycle: Lifecycle.Singleton,
             instance,
             factory: null,
         }
-        this.bind(type, binding)
+        this.bind(binding)
         return this
     }
 
@@ -74,31 +86,37 @@ export class DIContainerBuilder<TypeMap extends object> {
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
         lifecycle = Lifecycle.Singleton,
+        name: TBindingName = null,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
+            name,
             lifecycle,
             factory,
             instance: null,
         }
-        this.bind(type, binding)
+        this.bind(binding)
         return this
     }
 
-    public getBindingOfType<Type extends keyof TypeMap>(type: Type): IEntityBinding<TypeMap, Type> | null {
-        const binding = this._bindingsMap.get(type)
-        if (!binding) return null
+    public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
+        const binding = this._bindings.find(it => it.type === type && it.name == name)
+        if (binding == null) return null
         return binding as IEntityBinding<TypeMap, Type>
     }
 
+    public getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type>[] {
+        return this._bindings.filter(it => it.type === type && it.name === name) as IEntityBinding<TypeMap, Type>[]
+    }
+
     public build(): DIContainer<TypeMap> {
-        const activator = new EntityActivator(this._bindingsMap)
+        const activator = new EntityActivator(this._bindings)
         return new DIContainer(activator)
     }
 
-    private bind<Type extends keyof TypeMap>(type: Type, binding: IEntityBinding<TypeMap, Type>): void {
-        this._bindingsMap.set(type, binding)
+    private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>): void {
+        this._bindings.push(binding)
     }
 }

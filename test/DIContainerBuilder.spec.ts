@@ -27,7 +27,7 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{ value: string }>()
 
         // Act --------
-        const binding = builder.getBindingOfType('value')
+        const binding = builder.findBindingOf('value')
 
         // Assert -----
         expect(binding).toBeNull()
@@ -40,7 +40,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindInstance('value', expectedValue)
-        const binding = builder.getBindingOfType('value')
+        const binding = builder.findBindingOf('value')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -58,7 +58,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindFactory('typeKey', factory)
-        const binding = builder.getBindingOfType('typeKey')
+        const binding = builder.findBindingOf('typeKey')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -82,7 +82,7 @@ describe('DIContainerBuilder', () => {
             .bindInstance('originValue', 10)
             .bindFactory('factoryValue', factory)
 
-        const factoryBinding = builder.getBindingOfType('factoryValue')
+        const factoryBinding = builder.findBindingOf('factoryValue')
 
         // Assert ------
         expect(factoryBinding).not.toBeNull()
@@ -98,7 +98,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindFactory('typeKey', factory, Lifecycle.Transient)
-        const binding = builder.getBindingOfType('typeKey')
+        const binding = builder.findBindingOf('typeKey')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -142,5 +142,125 @@ describe('DIContainerBuilder', () => {
         // Assert ------
         expect(error).not.toBeNull()
         expect(error?.type).toBe('typeKey')
+    })
+
+    it('Bind named instance', () => {
+        // Arrange -----
+        const expectedValueA = 10
+        const expectedValueB = 42
+        const builder = DIContainer.builder<{ typeKey: number }>()
+
+        // Act ----------
+        builder
+            .bindInstance('typeKey', expectedValueA, 'A')
+            .bindInstance('typeKey', expectedValueB, 'B')
+
+        const bindingDefault = builder.findBindingOf('typeKey')
+        const bindingA = builder.findBindingOf('typeKey', 'A')
+        const bindingB = builder.findBindingOf('typeKey', 'B')
+
+        // Assert -------
+        expect(bindingDefault).toBeNull()
+
+        expect(bindingA?.name).toBe('A')
+        expect(bindingA?.instance).toBe(expectedValueA)
+
+        expect(bindingB?.name).toBe('B')
+        expect(bindingB?.instance).toBe(expectedValueB)
+    })
+
+    it('Multi-instance binding', () => {
+        // Arrange -------
+        const expectedValue1 = 1
+        const expectedValue2 = 2
+        const builder = DIContainer.builder<{ typeKey: number }>()
+
+        // Act -----------
+        builder
+            .bindInstance('typeKey', expectedValue1)
+            .bindInstance('typeKey', expectedValue2)
+
+        const bindings = builder.getAllBindingsOf('typeKey')
+
+        // Assert --------
+        expect(bindings.length).toBe(2)
+        expect(bindings[0].instance).toBe(expectedValue1)
+        expect(bindings[1].instance).toBe(expectedValue2)
+    })
+
+    it('Multi-factory binding', () => {
+        // Arrange -----
+        const factory1 = () => 123
+        const factory2 = () => 321
+        const builder = DIContainer.builder<{ typeKey: number }>()
+
+        // Act ---------
+        builder
+            .bindFactory('typeKey', factory1)
+            .bindFactory('typeKey', factory2)
+
+        const bindings = builder.getAllBindingsOf('typeKey')
+
+        // Assert ------
+        expect(bindings.length).toBe(2)
+        expect(bindings[0]).not.toBe(bindings[1])
+        expect(bindings[0].type).toBe(bindings[1].type)
+        expect(bindings[0].factory).toBe(factory1)
+        expect(bindings[1].factory).toBe(factory2)
+    })
+
+    it('Mixed multi binding', () => {
+        // Arrange ----------
+        const value = 'Foobar'
+        const factory = () => 'Hello'
+
+        const builder = DIContainer.builder<{ typeKey: string }>()
+
+        // Act --------------
+        builder
+            .bindInstance('typeKey', value)
+            .bindFactory('typeKey', factory, Lifecycle.LazySingleton)
+
+        const bindings = builder.getAllBindingsOf('typeKey')
+
+        // Assert -----------
+        expect(bindings.length).toBe(2)
+        expect(bindings[0]).not.toBe(bindings[1])
+        expect(bindings[0].instance).toBe(value)
+        expect(bindings[0].factory).toBeNull()
+        expect(bindings[0].lifecycle).toBe(Lifecycle.Singleton)
+        expect(bindings[1].instance).toBeNull()
+        expect(bindings[1].factory).toBe(factory)
+        expect(bindings[1].lifecycle).toBe(Lifecycle.LazySingleton)
+    })
+
+    it('Multi named binding', () => {
+        // Arrange -----------
+        const strings = ["Hello", "World", "Foo", "Bar", "Qwe"]
+        const name = 'A'
+
+        const builder = DIContainer.builder<{ typeKey: string }>()
+
+        // Act ---------------
+        builder
+            .bindInstance('typeKey', strings[0])
+            .bindInstance('typeKey', strings[1])
+            .bindInstance('typeKey', strings[2], name)
+            .bindInstance('typeKey', strings[3], name)
+            .bindInstance('typeKey', strings[4], name)
+
+        const defaultBindings = builder.getAllBindingsOf('typeKey')
+        const namedBindings = builder.getAllBindingsOf('typeKey', name)
+
+        // Assert ------------
+        expect(defaultBindings.length).toBe(2)
+        expect(namedBindings.length).toBe(3)
+
+        expect(defaultBindings[0].instance).toBe(strings[0])
+        expect(defaultBindings[1].instance).toBe(strings[1])
+
+        expect(namedBindings[0].instance).toBe(strings[2])
+        expect(namedBindings[1].instance).toBe(strings[3])
+        expect(namedBindings[2].instance).toBe(strings[4])
     })
 });
