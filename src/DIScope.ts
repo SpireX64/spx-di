@@ -1,8 +1,9 @@
-import { Lifecycle, TProvider, TScopeKey } from './types'
+import {Lifecycle, TProvider, TScopeKey} from './types'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
 import ClosedScopeDIError from './errors/ClosedScopeDIError'
+import IEntityBinding from "./IEntityBinding";
 
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
@@ -27,6 +28,23 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         return this._isClosed
     }
 
+    private getActivatedInstance<Type extends keyof TypeMap>(
+        binding: IEntityBinding<TypeMap, Type>,
+        allowInheritedGet: boolean,
+    ): TypeMap[Type] | null {
+        if (binding.instance != null)
+            return binding.instance
+
+        let instance: TypeMap[Type] | undefined
+        if (allowInheritedGet) {
+            instance = this._parent?.get(binding.type)
+            if (instance != null)
+                return instance as TypeMap[Type]
+        }
+
+        return this._scopedInstancesMap.get(binding.type) as TypeMap[Type]
+    }
+
     public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
         if (this._isClosed)
             throw new ClosedScopeDIError(this.key)
@@ -35,20 +53,9 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         if (binding == null)
             throw new BindingNotFoundDIError(type.toString())
 
-        if (binding.instance != null)
-            return binding.instance
-
-        let instance: TypeMap[Type] | undefined
-
         const isSingleton = binding.lifecycle === Lifecycle.Singleton
             || binding.lifecycle === Lifecycle.LazySingleton
-        if (isSingleton) {
-            instance = this._parent?.get(type)
-            if (instance != null)
-                return instance as TypeMap[Type]
-        }
-
-        instance = this._scopedInstancesMap.get(type) as TypeMap[Type]
+        let instance = this.getActivatedInstance(binding, isSingleton)
         if (instance != null)
             return instance
 
@@ -59,23 +66,37 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         return instance
     }
 
-    public  getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {
+    public getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {
         const scope = this
+
         function provider() {
             if (scope.isClosed)
                 throw new ClosedScopeDIError(scope.key)
             return scope.get(type)
         }
+
         const providerName = `provide_${type.toString()}_${scope.key.toString()}`
-        Object.defineProperty(provider, 'name', { value: providerName })
+        Object.defineProperty(provider, 'name', {value: providerName})
         return provider
     }
 
     public getLazy<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
+        const binding = this._activator.findBinding(type)
+        if (binding == null)
+            throw new BindingNotFoundDIError(type.toString())
+
+        const instance = this.getActivatedInstance(
+            binding,
+            binding.lifecycle === Lifecycle.Singleton,
+        )
+        if (instance != null)
+            return instance
+
+        // Instance was not activated, building lazy-instance
         let proxyState: {
             type: Type
             targetRef: TypeMap[Type] | null,
-            provider: TProvider<TypeMap[Type]> ,
+            provider: TProvider<TypeMap[Type]>,
         } = {
             type,
             provider: this.getProvider(type),
