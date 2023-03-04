@@ -1,6 +1,6 @@
 import DIContainer from '../src/DIContainer'
 import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
-import {Lifecycle} from '../src/types'
+import { Lifecycle } from '../src/types'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {
@@ -247,5 +247,63 @@ describe('DIContainer', function () {
         // Assert ------
         expect(object1).toBe(object2) // Global scope was not closed
         expect(factory.mock.calls.length).toBe(1) // Object instance was re-used
+    })
+
+    it('Get instance provider', () => {
+        // Arrange ----
+        const expectedValue = 42
+        const factory = jest.fn(r => ({ value: r.get('value') }))
+
+        const container = DIContainer.builder<{
+            value: number,
+            object: { value: number },
+        }>()
+            .bindInstance('value', expectedValue)
+            .bindFactory('object', factory, Lifecycle.LazySingleton) // do not create immediately
+            .build()
+
+        // Act ---------
+        const factoryCallsBeforeGetProvider = factory.mock.calls.length
+        const provider = container.getProvider('object')
+        const factoryCallsAfterGetProvider = factory.mock.calls.length
+        const instance1 = provider()
+        const factoryCallsAfterFirstCallOfProvider = factory.mock.calls.length
+        const instance2 = provider()
+        const factoryCallsAfterSecondCallOfProvider = factory.mock.calls.length
+
+        // Assert ------
+        expect(factoryCallsBeforeGetProvider).toBe(0)
+        expect(factoryCallsAfterGetProvider).toBe(0)
+        expect(factoryCallsAfterFirstCallOfProvider).toBe(1) // object created
+        expect(factoryCallsAfterSecondCallOfProvider).toBe(1) // object was re-used
+        expect(instance1).toBe(instance2)
+        expect(instance1.value).toBe(expectedValue)
+    })
+
+    it('Get lazy instance', () => {
+        // Arrange ----
+        const expectedValue = 42
+        const factory = jest.fn(r => ({ value: r.get('value') }))
+
+        const container = DIContainer.builder<{
+            value: number,
+            object: { value: number },
+        }>()
+            .bindInstance('value', expectedValue)
+            .bindFactory('object', factory, Lifecycle.LazySingleton) // do not create immediately
+            .build()
+
+        // Act ---------
+        const factoryCallsBeforeGetLazyInstance = factory.mock.calls.length
+        const lazyInstance = container.getLazy('object')
+        const factoryCallsAfterGetLazyInstance = factory.mock.calls.length
+        const value = lazyInstance.value
+        const factoryCallsAfterGetValueByInstance = factory.mock.calls.length
+
+        // Assert ------
+        expect(factoryCallsBeforeGetLazyInstance).toBe(0)
+        expect(factoryCallsAfterGetLazyInstance).toBe(0) // There is an instance, but the factory is still not being called
+        expect(factoryCallsAfterGetValueByInstance).toBe(1) // Object was created on first interaction with lazy-instance
+        expect(value).toBe(expectedValue)
     })
 })

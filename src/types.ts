@@ -11,3 +11,5 @@ export enum Lifecycle {
     Scoped = 'Scoped',
     Transient = 'Transient',
 }
+
+export type TProvider<Type> = () => Type

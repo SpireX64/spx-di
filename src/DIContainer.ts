@@ -1,5 +1,5 @@
 import IEntityBinding from './IEntityBinding'
-import { Lifecycle, TInstanceFactory, TScopeKey } from './types'
+import { Lifecycle, TInstanceFactory, TProvider, TScopeKey } from './types'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
@@ -19,6 +19,14 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
 
     public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
         return this._globalScope.get(type)
+    }
+
+    public getLazy<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
+        return this._globalScope.getLazy(type);
+    }
+
+    public getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {
+        return this._globalScope.getProvider(type)
     }
 
     public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
