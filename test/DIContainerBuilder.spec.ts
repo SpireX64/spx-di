@@ -1,6 +1,7 @@
 import DIContainer, {DIContainerBuilder} from '../src/DIContainer'
 import NullableBindingDIError from '../src/errors/NullableBindingDIError'
 import {Lifecycle} from '../src/types'
+import MultiBindingDIError from "../src/errors/MultiBindingDIError";
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {
@@ -219,7 +220,7 @@ describe('DIContainerBuilder', () => {
         // Act --------------
         builder
             .bindInstance('typeKey', value)
-            .bindFactory('typeKey', factory, Lifecycle.LazySingleton)
+            .bindFactory('typeKey', factory)
 
         const bindings = builder.getAllBindingsOf('typeKey')
 
@@ -231,7 +232,7 @@ describe('DIContainerBuilder', () => {
         expect(bindings[0].lifecycle).toBe(Lifecycle.Singleton)
         expect(bindings[1].instance).toBeNull()
         expect(bindings[1].factory).toBe(factory)
-        expect(bindings[1].lifecycle).toBe(Lifecycle.LazySingleton)
+        expect(bindings[1].lifecycle).toBe(Lifecycle.Singleton)
     })
 
     it('Multi named binding', () => {
@@ -262,5 +263,25 @@ describe('DIContainerBuilder', () => {
         expect(namedBindings[0].instance).toBe(strings[2])
         expect(namedBindings[1].instance).toBe(strings[3])
         expect(namedBindings[2].instance).toBe(strings[4])
+    })
+
+    it('Throw error on non-singleton binding', () => {
+        // Arrange ----
+        const builder = DIContainer.builder<{ typeKey: number }>()
+        let error: MultiBindingDIError | null = null
+
+        // Act --------
+        try {
+            builder
+                .bindFactory('typeKey', () => 1)
+                .bindFactory('typeKey', () => 2, Lifecycle.LazySingleton)
+        } catch (e) {
+            if (e instanceof MultiBindingDIError)
+                error = e
+        }
+
+        // Assert -----
+        expect(error).not.toBeNull()
+        expect(error?.message).toMatch(`${Lifecycle.LazySingleton} "typeKey"`)
     })
 });

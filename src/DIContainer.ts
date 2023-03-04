@@ -1,4 +1,5 @@
 import IEntityBinding from './IEntityBinding'
+import MultiBindingDIError from './errors/MultiBindingDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
@@ -117,6 +118,16 @@ export class DIContainerBuilder<TypeMap extends object> {
     }
 
     private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>): void {
+        if (binding.lifecycle !== Lifecycle.Singleton) {
+            const wasBound = this._bindings
+                .some(it => it.type === binding.type && it.name === binding.name)
+            if (wasBound)
+                throw new MultiBindingDIError(
+                    binding.type.toString(),
+                    binding.name,
+                    binding.lifecycle,
+                )
+        }
         this._bindings.push(binding)
     }
 }
