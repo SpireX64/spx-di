@@ -2,6 +2,7 @@ import IEntityBinding from './IEntityBinding'
 import IDependencyResolver from './IDepencencyResolver'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import DependencyCycleDIError from './errors/DependencyCycleDIError'
+import { Lifecycle } from './types'
 
 export default class EntityActivator<TypeMap extends object> {
     private readonly _bindings: ReadonlyMap<keyof TypeMap, IEntityBinding<TypeMap, keyof TypeMap>>
@@ -37,5 +38,18 @@ export default class EntityActivator<TypeMap extends object> {
         }
 
         throw new NullableBindingDIError(binding.type.toString())
+    }
+
+    public activateSingletons(
+        resolver: IDependencyResolver<TypeMap>,
+    ): ReadonlyMap<IEntityBinding<TypeMap, keyof TypeMap>, TypeMap[keyof TypeMap]> {
+        const activatedInstancesMap = new Map<IEntityBinding<TypeMap, keyof TypeMap>, TypeMap[keyof TypeMap]>()
+        this._bindings.forEach(binding => {
+            if (binding.lifecycle === Lifecycle.Singleton && binding.instance == null) {
+                const instance = this.activate(resolver, binding)
+                activatedInstancesMap.set(binding, instance)
+            }
+        })
+        return activatedInstancesMap
     }
 }

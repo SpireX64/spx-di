@@ -11,6 +11,10 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
 
     public constructor(activator: EntityActivator<TypeMap>) {
         this._activator = activator
+        activator.activateSingletons(this)
+            .forEach((instance, binding) => {
+                this._singletonsMap.set(binding.type, instance)
+            })
     }
 
     public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
@@ -21,14 +25,16 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         if (binding.instance != null)
             return binding.instance
 
-        if (binding.lifecycle === Lifecycle.SINGLETON) {
+        const isSingleton = binding.lifecycle === Lifecycle.Singleton
+                         || binding.lifecycle === Lifecycle.LazySingleton
+        if (isSingleton) {
             const instance = this._singletonsMap.get(type)
             if (instance != null)
                 return instance as TypeMap[Type]
         }
 
         const activatedInstance = this._activator.activate(this, binding)
-        if (binding.lifecycle === Lifecycle.SINGLETON) {
+        if (isSingleton) {
             this._singletonsMap.set(type, activatedInstance)
         }
         return activatedInstance
@@ -47,7 +53,7 @@ export class DIContainerBuilder<TypeMap extends object> {
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
-            lifecycle: Lifecycle.SINGLETON,
+            lifecycle: Lifecycle.Singleton,
             instance,
             factory: null,
         }
@@ -58,7 +64,7 @@ export class DIContainerBuilder<TypeMap extends object> {
     public bindFactory<Type extends keyof TypeMap>(
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
-        lifecycle = Lifecycle.SINGLETON,
+        lifecycle = Lifecycle.Singleton,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
             throw new NullableBindingDIError(type.toString())

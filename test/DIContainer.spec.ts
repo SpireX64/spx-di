@@ -1,6 +1,6 @@
 import DIContainer from '../src/DIContainer'
 import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
-import { Lifecycle } from '../src/types'
+import {Lifecycle} from '../src/types'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {
@@ -35,21 +35,48 @@ describe('DIContainer', function () {
         expect(value).toBe(expectedValue)
     })
 
-    it('Get value by factory binding', () => {
+    it('Get value by binding singleton factory', () => {
         // Arrange -----
         const expectedValue = 42
         const factory = jest.fn(() => expectedValue)
 
-        const container = DIContainer.builder<{ value: number }>()
+        const builder = DIContainer.builder<{ value: number }>()
             .bindFactory('value', factory)
-            .build()
 
         // Act ---------
+        const factoryCallsBeforeBuild = factory.mock.calls.length
+        const container = builder.build()
+        const factoryCallsAfterBuild = factory.mock.calls.length
         const value = container.get('value')
+        const factoryCallsAfterGet = factory.mock.calls.length
 
         // Assert ------
         expect(value).toBe(expectedValue)
-        expect(factory.mock.calls.length).toBe(1)
+        expect(factoryCallsBeforeBuild).toBe(0)
+        expect(factoryCallsAfterBuild).toBe(1)
+        expect(factoryCallsAfterGet).toBe(1) // Instance was re-used
+    })
+
+    it('Get value by binding lazy singleton factory', () => {
+        // Arrange -----
+        const expectedValue = 42
+        const factory = jest.fn(() => expectedValue)
+
+        const builder = DIContainer.builder<{ value: number }>()
+            .bindFactory('value', factory, Lifecycle.LazySingleton)
+
+        // Act ---------
+        const factoryCallsBeforeBuild = factory.mock.calls.length
+        const container = builder.build()
+        const factoryCallsAfterBuild = factory.mock.calls.length
+        const value = container.get('value')
+        const factoryCallsAfterGet = factory.mock.calls.length
+
+        // Assert ------
+        expect(value).toBe(expectedValue)
+        expect(factoryCallsBeforeBuild).toBe(0)
+        expect(factoryCallsAfterBuild).toBe(0)
+        expect(factoryCallsAfterGet).toBe(1) // Instance was created on 'get'
     })
 
     it('Get value by factory with dependency', () => {
@@ -82,7 +109,7 @@ describe('DIContainer', function () {
         const container = DIContainer.builder<{
             typeKey: object,
         }>()
-            .bindFactory('typeKey', factory, Lifecycle.TRANSIENT)
+            .bindFactory('typeKey', factory, Lifecycle.Transient)
             .build()
 
         // Act -----------
