@@ -4,6 +4,7 @@ import EntityActivator from './EntityActivator'
 import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
 import ClosedScopeDIError from './errors/ClosedScopeDIError'
 import IEntityBinding from "./IEntityBinding";
+import { createLazyInstance } from './ILazyInstance'
 
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
@@ -93,40 +94,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
             return instance
 
         // Instance was not activated, building lazy-instance
-        let proxyState: {
-            type: Type
-            targetRef: TypeMap[Type] | null,
-            provider: TProvider<TypeMap[Type]>,
-        } = {
-            type,
-            provider: this.getProvider(type),
-            targetRef: null,
-        }
-
-        const getTarget = (state: typeof proxyState) => {
-            if (state.targetRef == null) {
-                state.targetRef = state.provider()
-            }
-            return proxyState.targetRef
-        }
-        const proxy = new Proxy(proxyState, {
-            get(state: typeof proxyState, p: string | symbol): any {
-                const target = getTarget(state)
-                // @ts-ignore
-                return p in target ? target[p] as any : undefined
-            },
-            set(state: typeof proxyState, p: string | symbol, newValue: any): boolean {
-                const target = getTarget(state)
-                // @ts-ignore
-                if (p in target) {
-                    // @ts-ignore
-                    target[p] = newValue
-                    return true
-                }
-                return false
-            }
-        })
-        return proxy as TypeMap[Type]
+        return createLazyInstance(binding.type, this.getProvider(type))
     }
 
     public close() {

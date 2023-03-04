@@ -1,6 +1,7 @@
 import DIContainer from '../src/DIContainer'
 import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
 import { Lifecycle } from '../src/types'
+import { isLazyInstance } from '../src/ILazyInstance'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {
@@ -304,6 +305,43 @@ describe('DIContainer', function () {
         expect(factoryCallsBeforeGetLazyInstance).toBe(0)
         expect(factoryCallsAfterGetLazyInstance).toBe(0) // There is an instance, but the factory is still not being called
         expect(factoryCallsAfterGetValueByInstance).toBe(1) // Object was created on first interaction with lazy-instance
+        expect(isLazyInstance(lazyInstance)).toBeTruthy()
         expect(value).toBe(expectedValue)
+    })
+
+    it('Dont create lazy for instances & singletons', () => {
+        // Arrange -------
+        const expectedValue = 42
+        const singletonFactory = jest.fn(r => ({ value: r.get('value') }))
+        const lazySingletonFactory = jest.fn(r => ({ value: r.get('value') + 1 }))
+        const container = DIContainer.builder<{
+            value: number
+            singletonObject: { value: number }
+            lazySingletonObject: { value: number }
+        }>()
+            .bindInstance('value', expectedValue)
+            .bindFactory('singletonObject', singletonFactory)
+            .bindFactory('lazySingletonObject', lazySingletonFactory, Lifecycle.LazySingleton)
+            .build()
+
+        // Act --------------
+        const value = container.getLazy('value')
+        const singletonObject = container.getLazy('singletonObject')
+        const lazySingletonObjectA = container.getLazy('lazySingletonObject')
+        const valueFromLazyA = lazySingletonObjectA.value
+        const lazySingletonObjectB = container.getLazy('lazySingletonObject')
+        const valueFromLazyB = lazySingletonObjectA.value
+
+        // Assert -----------
+        expect(isLazyInstance(value)).toBeFalsy()
+        expect(isLazyInstance(singletonObject)).toBeFalsy()
+        expect(isLazyInstance(lazySingletonObjectA)).toBeTruthy()
+        expect(valueFromLazyA).toBe(expectedValue + 1)
+
+        // Instance was created, lazy wrapper is not required
+        expect(isLazyInstance(lazySingletonObjectB)).toBeFalsy()
+        expect(valueFromLazyB).toBe(expectedValue + 1)
+
+        expect(lazySingletonFactory.mock.calls.length).toBe(1) // Lazy singleton instance re-used
     })
 })
