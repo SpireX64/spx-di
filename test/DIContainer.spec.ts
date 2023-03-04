@@ -143,4 +143,25 @@ describe('DIContainer', function () {
         expect(object2).toBe(object1)
         expect(object3).toBe(object1)
     })
+
+    it('Lazy singleton lifecycle', () => {
+        // Arrange -------
+        const singletonFactory = jest.fn(() => new Object())
+
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', singletonFactory, Lifecycle.LazySingleton)
+            .build()
+
+        // Act -----------
+        const object1 = container.get('typeKey')
+        const object2 = container.get('typeKey')
+        const object3 = container.get('typeKey')
+
+        // Assert --------
+        expect(singletonFactory.mock.calls.length).toBe(1)
+        expect(object2).toBe(object1)
+        expect(object3).toBe(object1)
+    })
 })
