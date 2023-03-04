@@ -1,43 +1,44 @@
 import IEntityBinding from './IEntityBinding'
-import { Lifecycle, TInstanceFactory } from './types'
-import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
+import { Lifecycle, TInstanceFactory, TScopeKey } from './types'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './IDepencencyResolver'
 import EntityActivator from './EntityActivator'
+import DIScope from './DIScope'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
+    public static globalScopeKey: TScopeKey = Symbol('global')
+    private readonly _globalScope: DIScope<TypeMap>
     private readonly _activator: EntityActivator<TypeMap>
-    private readonly _singletonsMap = new Map<keyof TypeMap, TypeMap[keyof TypeMap]>()
+    private readonly _scopes = new Map<TScopeKey, DIScope<TypeMap>>()
 
     public constructor(activator: EntityActivator<TypeMap>) {
         this._activator = activator
-        activator.activateSingletons(this)
-            .forEach((instance, binding) => {
-                this._singletonsMap.set(binding.type, instance)
-            })
+        this._globalScope = new DIScope<TypeMap>(DIContainer.globalScopeKey, activator)
+        this._scopes.set(this._globalScope.key, this._globalScope)
     }
 
     public get<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
-        const binding = this._activator.findBinding(type)
-        if (binding == null)
-            throw new BindingNotFoundDIError(type.toString())
+        return this._globalScope.get(type)
+    }
 
-        if (binding.instance != null)
-            return binding.instance
-
-        const isSingleton = binding.lifecycle === Lifecycle.Singleton
-                         || binding.lifecycle === Lifecycle.LazySingleton
-        if (isSingleton) {
-            const instance = this._singletonsMap.get(type)
-            if (instance != null)
-                return instance as TypeMap[Type]
+    public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
+        let scope: DIScope<TypeMap> | undefined = this._scopes.get(key)
+        if (scope != null && scope) {
+            if (!scope.isClosed)
+                return scope
         }
 
-        const activatedInstance = this._activator.activate(this, binding)
-        if (isSingleton) {
-            this._singletonsMap.set(type, activatedInstance)
-        }
-        return activatedInstance
+        scope = new DIScope(key, this._activator, this._globalScope)
+        this._scopes.set(key, scope)
+        return scope
+    }
+
+    public closeScope(key: TScopeKey): void {
+        if (key === DIContainer.globalScopeKey) return
+        const scope = this._scopes.get(key)
+        if (!scope) return
+        this._scopes.delete(key)
+        scope.close()
     }
 
     public static builder<TypeMap extends object>(){

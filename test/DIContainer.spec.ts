@@ -164,4 +164,88 @@ describe('DIContainer', function () {
         expect(object2).toBe(object1)
         expect(object3).toBe(object1)
     })
+
+    it('Scoped lifecycle', () => {
+        // Arrange ---------
+        const scopeA = 'A'
+        const scopeB = 'B'
+        const factory = jest.fn(() => new Object())
+
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', factory, Lifecycle.Scoped)
+            .build()
+
+        // Act ---------------
+        const objectA1 = container.scope(scopeA).get('typeKey')
+        const objectA2 = container.scope(scopeA).get('typeKey')
+        const objectB1 = container.scope(scopeB).get('typeKey')
+        const objectB2 = container.scope(scopeB).get('typeKey')
+
+        // Assert ------------
+        expect(objectA1).toBe(objectA2)
+        expect(objectB1).toBe(objectB2)
+
+        expect(objectA1).not.toBe(objectB1)
+        expect(objectA2).not.toBe(objectB2)
+
+        expect(factory.mock.calls.length).toBe(2) // A, B
+    })
+
+    it('Global scope shortcut', () => {
+        // Arrange ---------
+        const factory = jest.fn(() => new Object())
+
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', factory, Lifecycle.Scoped)
+            .build()
+
+        // Act -------------
+        const object1 = container.get('typeKey')
+        const object2 = container.scope(DIContainer.globalScopeKey).get('typeKey')
+
+        // Assert ----------
+        expect(object1).toBe(object2)
+    })
+
+    it('Close scope', () => {
+        // Arrange ---------
+        const scopeKey = 'A'
+        const factory = jest.fn(() => new Object())
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', factory, Lifecycle.Scoped)
+            .build()
+
+        // Act --------------
+        const object1 = container.scope(scopeKey).get('typeKey')
+        container.closeScope('A')
+        const object2 = container.scope(scopeKey).get('typeKey')
+
+        // Assert -----------
+        expect(object1).not.toBe(object2)
+    })
+
+    it('Try to close global scope', () => {
+        // Arrange -----
+        const factory = jest.fn(() => new Object())
+        const container = DIContainer.builder<{
+            typeKey: object,
+        }>()
+            .bindFactory('typeKey', factory, Lifecycle.Scoped)
+            .build()
+
+        // Act ---------
+        const object1 = container.scope(DIContainer.globalScopeKey).get('typeKey')
+        container.closeScope(DIContainer.globalScopeKey)
+        const object2 = container.scope(DIContainer.globalScopeKey).get('typeKey')
+
+        // Assert ------
+        expect(object1).toBe(object2) // Global scope was not closed
+        expect(factory.mock.calls.length).toBe(1) // Object instance was re-used
+    })
 })
