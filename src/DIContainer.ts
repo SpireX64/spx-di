@@ -66,8 +66,46 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
     }
 }
 
+export interface IConditionalBinder<TypeMap extends object> {
+    bindInstance<Type extends keyof TypeMap>(
+        type: Type,
+        instance: TypeMap[Type],
+        name?: TBindingName,
+    ): DIContainerBuilder<TypeMap>
+
+    bindFactory<Type extends keyof TypeMap>(
+        type: Type,
+        factory: TInstanceFactory<TypeMap, Type>,
+        lifecycle?: Lifecycle,
+        name?: TBindingName,
+    ): DIContainerBuilder<TypeMap>
+}
+
 export class DIContainerBuilder<TypeMap extends object> {
     private readonly _bindings: TBindingsList<TypeMap> = []
+
+    public when(condition: boolean): IConditionalBinder<TypeMap> {
+        const container = this
+        return {
+            bindInstance<Type extends keyof TypeMap>(
+                type: Type,
+                instance: TypeMap[Type],
+                name?: TBindingName,
+            ): DIContainerBuilder<TypeMap> {
+                if (condition) container.bindInstance(type, instance, name)
+                return container
+            },
+            bindFactory<Type extends keyof TypeMap>(
+                type: Type,
+                factory: TInstanceFactory<TypeMap, Type>,
+                lifecycle?: Lifecycle,
+                name?: TBindingName,
+            ): DIContainerBuilder<TypeMap> {
+                if (condition) container.bindFactory(type, factory, lifecycle, name)
+                return container
+            },
+        }
+    }
 
     public bindInstance<Type extends keyof TypeMap>(
         type: Type,

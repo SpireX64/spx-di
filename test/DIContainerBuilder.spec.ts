@@ -110,6 +110,30 @@ describe('DIContainerBuilder', () => {
         expect(binding?.instance).toBeNull()
     })
 
+    it('Conditional binding', () => {
+        // Arrange -----
+        const builder = DIContainer.builder<{
+            foo: string
+            bar: string
+            qwe: string
+        }>()
+
+        // Act ---------
+        builder
+            .when(true).bindInstance('foo', 'FOO')
+            .when(false).bindInstance('bar', 'BAR')
+            .bindInstance('qwe', 'QWE')
+
+        const fooBinding = builder.findBindingOf('foo')
+        const barBinding = builder.findBindingOf('bar')
+        const qweBinding = builder.findBindingOf('qwe')
+
+        // Assert ------
+        expect(fooBinding).not.toBeNull()
+        expect(barBinding).toBeNull()
+        expect(qweBinding).not.toBeNull()
+    })
+
     it('Force nullable instance binding', () => {
         // Arrange -----
         const builder = DIContainer.builder<{ typeKey: string }>()
