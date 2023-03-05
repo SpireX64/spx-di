@@ -5,17 +5,19 @@
 
 - Простой и быстрый старт в любом проекте
 - Независимость инфраструктуры проекта от библиотеки
+- Нет глобальных божественных объектов
 - Расширяемость
 
 ## Что может?
 
-- Страя типизация и немутабельный контейнер
+- Строгая типизация и не изменяемый контейнер
 - Использование значений и фабрик для инъекции
 - Управление жизненым циклом экземпляров
 - Инъекция по имени
 - Условная конфигурация
 - Отложенная инъекция (Provider / Lazy)
 - Разделение конфигурации контейнера на модули
+- Автоопределение циклический зависимостей
 
 ## Быстрый старт
 
@@ -37,10 +39,9 @@ export enum AppType {
 В ней указывается связь ключа и конкретного типа:
 
 ```ts
-import { DIContainer } from 'spx-di'
 import { IAppManager } from '../modules/app/abstract'
 import { IHttpClient } from '../modules/network/abstract'
-import { ILogger } from '../logger/ILogger'
+import { ILogger } from '../logger'
 
 export type AppTypeMap = {
     [AppType.AppManager]: IAppManager;
@@ -58,6 +59,7 @@ export type AppTypeMap = {
 Функция фабрики принимает "resolver" в качестве параметра.
 С помощью него можно запросить необходимые зависимости для постоения типа.
 ```ts
+import { DIContainer } from 'spx-di'
 import { AppManager } from '../modules/app'
 import { ConsoleLogger, NetworkLogger } from '../logger'
 import { HttpClient } from '../modules/network'
@@ -111,8 +113,7 @@ export type AppContainer = typeof container
 
 
 ### Шаг 4: Использование контейнера
-Контейнер готов, теперь можем попросить необходимый
-сервис и 
+Контейнер готов, теперь можно попросить необходимый сервис и использовать его:
 ```ts
 function main(container: AppContainer) {
     // Запрашиваем экземпляр AppManager
