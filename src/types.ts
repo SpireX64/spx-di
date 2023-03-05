@@ -1,5 +1,6 @@
 import IDependencyResolver from './IDepencencyResolver'
 import IEntityBinding from './IEntityBinding'
+import { DIContainerBuilder } from './DIContainer'
 
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
     (resolver: IDependencyResolver<TypeMap>) => TypeMap[Type]
@@ -18,3 +19,9 @@ export enum Lifecycle {
 }
 
 export type TProvider<Type> = () => Type
+
+export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
+    resolver: DIContainerBuilder<TypeMap & DependencyTypeMap>,
+) => void
+
+export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never

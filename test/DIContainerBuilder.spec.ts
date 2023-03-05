@@ -1,6 +1,6 @@
-import DIContainer, {DIContainerBuilder} from '../src/DIContainer'
+import DIContainer, { DIContainerBuilder, createDIModule } from '../src/DIContainer'
 import NullableBindingDIError from '../src/errors/NullableBindingDIError'
-import {Lifecycle} from '../src/types'
+import { Lifecycle, TypeMapOfModule } from '../src/types'
 import MultiBindingDIError from "../src/errors/MultiBindingDIError";
 
 describe('DIContainerBuilder', () => {
@@ -307,5 +307,37 @@ describe('DIContainerBuilder', () => {
         // Assert -----
         expect(error).not.toBeNull()
         expect(error?.message).toMatch(`${Lifecycle.LazySingleton} "typeKey"`)
+    })
+
+    it('Separate DI configuration to modules', () => {
+        // Arrange -----
+        const moduleA = createDIModule<{ valueA: number }>(builder => {
+            builder
+                .bindInstance('valueA', 42)
+        })
+
+        const moduleB = createDIModule<{ valueB: number }, TypeMapOfModule<typeof moduleA>>(builder => {
+            builder
+                .bindInstance('valueB', 256)
+        })
+
+        // Act ---------
+        const builder = DIContainer.builder()
+            .useModule(moduleA)
+            .useModule(moduleB)
+
+        const hasModuleA = builder.hasModule(moduleA)
+        const hasModuleB = builder.hasModule(moduleB)
+
+        const bindingValueA = builder.findBindingOf('valueA')
+        const bindingValueB = builder.findBindingOf('valueB')
+
+        // Assert ------
+        expect(hasModuleA).toBeTruthy()
+        expect(hasModuleB).toBeTruthy()
+        expect(bindingValueA).not.toBeNull()
+        expect(bindingValueA?.instance).toBe(42)
+        expect(bindingValueB).not.toBeNull()
+        expect(bindingValueB?.instance).toBe(256)
     })
 });

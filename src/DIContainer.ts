@@ -6,6 +6,7 @@ import EntityActivator from './EntityActivator'
 import DIScope from './DIScope'
 import {
     Lifecycle,
+    DIModuleFunction,
     TBindingName,
     TBindingsList,
     TInstanceFactory,
@@ -61,7 +62,7 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         scope.close()
     }
 
-    public static builder<TypeMap extends object>(){
+    public static builder<TypeMap extends object = {}>(){
         return new DIContainerBuilder<TypeMap>()
     }
 }
@@ -83,6 +84,7 @@ export interface IConditionalBinder<TypeMap extends object> {
 
 export class DIContainerBuilder<TypeMap extends object> {
     private readonly _bindings: TBindingsList<TypeMap> = []
+    private readonly _modules: DIModuleFunction<any, any>[] = []
 
     public when(condition: boolean): IConditionalBinder<TypeMap> {
         const container = this
@@ -144,6 +146,17 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this
     }
 
+    public useModule<ModuleTypeMap extends object>(module: DIModuleFunction<ModuleTypeMap, any>): DIContainerBuilder<TypeMap & ModuleTypeMap> {
+        module(this)
+        this._modules.push(module)
+        // @ts-ignore
+        return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
+    }
+
+    public hasModule(module: DIModuleFunction<any, any>): boolean {
+        return this._modules.includes(module)
+    }
+
     public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
         const binding = this._bindings.find(it => it.type === type && it.name == name)
         if (binding == null) return null
@@ -173,3 +186,7 @@ export class DIContainerBuilder<TypeMap extends object> {
         this._bindings.push(binding)
     }
 }
+
+export const createDIModule = <TypeMap extends object, DependencyTypeMap extends object = {}>(
+    moduleFunc: DIModuleFunction<TypeMap, DependencyTypeMap>,
+) => moduleFunc;
