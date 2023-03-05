@@ -125,7 +125,9 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
     }
 
     public close() {
+        if (this._isClosed) return
         this._isClosed = true
+        this.disposeScopedInstances()
         this._scopedInstancesMap.clear()
     }
 
@@ -158,5 +160,19 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
             .forEach((instance, binding) => {
                 this.pushInstance(binding, instance)
             })
+    }
+
+    private disposeScopedInstances(): void {
+        this._scopedInstancesMap.forEach(typeGroup => {
+            typeGroup.forEach(instances => {
+                instances.forEach(instance => {
+                    // @ts-ignore
+                    if (Object.hasOwn(instance, 'dispose') && typeof instance.dispose === 'function') {
+                        // @ts-ignore
+                        instance.dispose()
+                    }
+                })
+            })
+        })
     }
 }

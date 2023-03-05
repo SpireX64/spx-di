@@ -15,6 +15,7 @@ Simple dependency injection library for JS/TS projects.
 - Conditional configuration
 - Delayed dependency injection (Provider / Lazy)
 - Splitting container configuration into modules
+- Auto-dispose scoped instances
 - Auto-detection of cyclic dependencies
 
 ## Quick start

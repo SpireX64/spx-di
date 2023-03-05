@@ -25,3 +25,7 @@ export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends o
 ) => void
 
 export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
+
+export interface IDisposable {
+    dispose(): void
+}

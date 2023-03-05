@@ -1,6 +1,6 @@
 import DIContainer from '../src/DIContainer'
 import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
-import { Lifecycle } from '../src/types'
+import { IDisposable, Lifecycle } from '../src/types'
 import { isLazyInstance } from '../src/ILazyInstance'
 
 describe('DIContainer', function () {
@@ -386,5 +386,29 @@ describe('DIContainer', function () {
         expect(values).toContain(10)
         expect(values).toContain(146)
         expect(values).toContain(42)
+    })
+
+    it('Dispose scoped instance when scope will be closed', () => {
+        // Arrange -----------
+        const scopeKey = 'A'
+        const disposeMethod = jest.fn()
+
+        const container = DIContainer.builder<{
+            disposable: IDisposable
+        }>()
+            .bindFactory(
+                'disposable',
+                () => <IDisposable>{dispose: disposeMethod},
+                Lifecycle.Scoped,
+            )
+            .build()
+
+        // Act --------------
+        const instDisposable = container.scope(scopeKey).get('disposable')
+        container.closeScope(scopeKey)
+
+        // Assert -----------
+        expect(instDisposable).not.toBeNull()
+        expect(disposeMethod.mock.calls.length).toBe(1) // "dispose()" was called
     })
 })
