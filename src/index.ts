@@ -1,1 +1,1 @@
-export { default as DIContainer, DIContainerBuilder } from './DIContainer'
+export { default as DIContainer, DIContainerBuilder, createDIModule } from './DIContainer'
