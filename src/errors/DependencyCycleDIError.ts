@@ -1,5 +1,5 @@
 import DIError from './DIError'
-import IEntityBinding from '../IEntityBinding'
+import IEntityBinding from '../abstract/IEntityBinding'
 
 export default class DependencyCycleDIError extends DIError {
     public constructor(activationChain: readonly IEntityBinding<any, any>[]) {

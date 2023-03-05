@@ -1,7 +1,10 @@
-import DIContainer from '../src/DIContainer'
-import BindingNotFoundDIError from '../src/errors/BindingNotFoundDIError'
-import { IDisposable, Lifecycle } from '../src/types'
-import { isLazyInstance } from '../src/ILazyInstance'
+import {
+    DIContainer,
+    Lifecycle,
+    IDisposable,
+    isLazyInstance,
+    BindingNotFoundDIError
+} from '../src'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {

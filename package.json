@@ -2,8 +2,15 @@
   "name": "spx-di",
   "version": "1.0.0",
   "license": "MIT",
-  "author": "Artem Sobolenkov (SpireX)",
-  "repository": "https://github.com/SpireX64/spx-di",
+  "author": {
+    "name": "Artem Sobolenkov",
+    "email": "SpireX@outlook.com",
+    "url": "https://github.com/SpireX64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SpireX64/spx-di"
+  },
   "description": "Dependency injection library for JS/TS projects",
   "private": false,
   "keywords": [
@@ -17,11 +24,16 @@
     "inversion of control"
   ],
   "main": "lib/index.js",
+  "jsnext:main": "es/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "build": "tsc -p ./src/tsconfig.json",
+    "build": "yarn run build:lib && yarn run build:es && yarn run build:es6 && yarn run build:amd",
+    "build:lib": "tsc -p ./src/tsconfig.json",
+    "build:es": "tsc -p ./src/tsconfig.es.json",
+    "build:es6": "tsc -p ./src/tsconfig.es6.json",
+    "build:amd": "tsc -p ./src/tsconfig.amd.json",
     "test": "jest",
-    "clean": "rm -r lib"
+    "clean": "rm -r lib es es6 amd"
   },
   "devDependencies": {
     "typescript": "^4.9.5",

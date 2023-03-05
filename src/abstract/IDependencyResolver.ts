@@ -1,4 +1,4 @@
-import { TBindingName, TProvider } from './types'
+import { TBindingName, TProvider } from '../types'
 
 export default interface IDependencyResolver<TypeMap extends object> {
     get<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type]

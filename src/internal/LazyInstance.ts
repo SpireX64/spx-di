@@ -1,6 +1,6 @@
-import { TProvider } from './types'
+import { TProvider } from '../types'
 
-export default interface ILazy<TypeMap extends object, Type extends keyof TypeMap> {
+interface ILazy<TypeMap extends object, Type extends keyof TypeMap> {
     type: Type
     ref: TypeMap[Type] | null,
     provider: TProvider<TypeMap[Type]>,

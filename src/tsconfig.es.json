@@ -2,9 +2,7 @@
   "extends": "../tsconfig.json",
   "include": ["./**/*.ts"],
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "outDir": "../lib",
-    "rootDir": "."
+    "outDir": "../es",
+    "module": "es2015"
   }
 }

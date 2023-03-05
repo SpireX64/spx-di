@@ -1,5 +1,6 @@
 import DIError from './DIError'
-import { Lifecycle, TBindingName } from '../types'
+import Lifecycle from '../Lifecycle'
+import type { TBindingName } from '../types'
 
 export default class MultiBindingDIError extends DIError {
     public constructor(bindingType: string, bindingName: TBindingName, lifecycle: Lifecycle) {

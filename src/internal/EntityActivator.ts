@@ -1,8 +1,9 @@
-import IEntityBinding from './IEntityBinding'
-import IDependencyResolver from './IDepencencyResolver'
-import NullableBindingDIError from './errors/NullableBindingDIError'
-import DependencyCycleDIError from './errors/DependencyCycleDIError'
-import {Lifecycle, TBindingName, TReadonlyBindingsList} from './types'
+import Lifecycle from '../Lifecycle'
+import IEntityBinding from '../abstract/IEntityBinding'
+import IDependencyResolver from '../abstract/IDependencyResolver'
+import NullableBindingDIError from '../errors/NullableBindingDIError'
+import DependencyCycleDIError from '../errors/DependencyCycleDIError'
+import type { TBindingName, TReadonlyBindingsList } from '../types'
 
 export default class EntityActivator<TypeMap extends object> {
     private readonly _bindings: TReadonlyBindingsList<TypeMap>

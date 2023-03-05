@@ -72,3 +72,6 @@ jspm_packages/
 
 # Output directory
 lib/
+es/
+es6/
+amd/

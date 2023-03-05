@@ -1,1 +1,7 @@
 export { default as DIContainer, DIContainerBuilder, createDIModule } from './DIContainer'
+export { isLazyInstance } from './internal/LazyInstance'
+export { default as Lifecycle } from './Lifecycle'
+export * from './errors'
+export type { TProvider, TScopeKey, TInstanceFactory, IDisposable, TypeMapOfModule } from './types'
+export type { default as IEntityBinding } from './abstract/IEntityBinding'
+export type { default as IDependencyResolver } from './abstract/IDependencyResolver'

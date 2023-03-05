@@ -1,4 +1,5 @@
-import { Lifecycle, TBindingName, TInstanceFactory } from './types'
+import Lifecycle from '../Lifecycle'
+import type { TBindingName, TInstanceFactory } from '../types'
 
 export default interface IEntityBinding<TypeMap extends object, Type extends keyof TypeMap> {
     readonly type: Type

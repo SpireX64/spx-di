@@ -1,10 +1,11 @@
-import { Lifecycle, TBindingName, TProvider, TScopeKey } from './types'
-import IDependencyResolver from './IDepencencyResolver'
+import Lifecycle from '../Lifecycle'
+import { TBindingName, TProvider, TScopeKey } from '../types'
+import IDependencyResolver from '../abstract/IDependencyResolver'
 import EntityActivator from './EntityActivator'
-import BindingNotFoundDIError from './errors/BindingNotFoundDIError'
-import ClosedScopeDIError from './errors/ClosedScopeDIError'
-import IEntityBinding from "./IEntityBinding";
-import { createLazyInstance } from './ILazyInstance'
+import BindingNotFoundDIError from '../errors/BindingNotFoundDIError'
+import ClosedScopeDIError from '../errors/ClosedScopeDIError'
+import IEntityBinding from "../abstract/IEntityBinding";
+import { createLazyInstance } from './LazyInstance'
 
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
@@ -28,7 +29,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         }
     }
 
-    public get isClosed(): boolean {
+    public isClosed(): boolean {
         return this._isClosed
     }
 
@@ -98,7 +99,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         const scope = this
 
         function provider() {
-            if (scope.isClosed)
+            if (scope.isClosed())
                 throw new ClosedScopeDIError(scope.key)
             return scope.get(type, name)
         }
@@ -167,7 +168,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
             typeGroup.forEach(instances => {
                 instances.forEach(instance => {
                     // @ts-ignore
-                    if (Object.hasOwn(instance, 'dispose') && typeof instance.dispose === 'function') {
+                    if (typeof instance.dispose === 'function') {
                         // @ts-ignore
                         instance.dispose()
                     }

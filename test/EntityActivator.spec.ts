@@ -1,9 +1,11 @@
-import IDependencyResolver from '../src/IDepencencyResolver'
-import DIContainer from '../src/DIContainer'
-import EntityActivator from '../src/EntityActivator'
-import NullableBindingDIError from '../src/errors/NullableBindingDIError'
-import DependencyCycleDIError from '../src/errors/DependencyCycleDIError'
-import { Lifecycle } from '../src/types'
+import {
+    DIContainer,
+    Lifecycle,
+    DependencyCycleDIError,
+    NullableBindingDIError,
+    IDependencyResolver,
+} from '../src'
+import EntityActivator from '../src/internal/EntityActivator'
 import createResolverMock from "./utils/createResolverMock";
 
 describe('EntityActivator', () => {
@@ -35,7 +37,8 @@ describe('EntityActivator', () => {
         const resolver: IDependencyResolver<{ value: string }> = {
             getLazy: jest.fn(),
             getProvider: jest.fn(),
-            get: jest.fn()
+            get: jest.fn(),
+            getAll: jest.fn(),
         }
         const activator = new EntityActivator([
             { type: 'value', lifecycle: Lifecycle.Singleton, name: null}

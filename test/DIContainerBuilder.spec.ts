@@ -1,7 +1,12 @@
-import DIContainer, { DIContainerBuilder, createDIModule } from '../src/DIContainer'
-import NullableBindingDIError from '../src/errors/NullableBindingDIError'
-import { Lifecycle, TypeMapOfModule } from '../src/types'
-import MultiBindingDIError from "../src/errors/MultiBindingDIError";
+import {
+    DIContainer,
+    DIContainerBuilder,
+    createDIModule,
+    Lifecycle,
+    NullableBindingDIError,
+    MultiBindingDIError,
+    TypeMapOfModule
+} from '../src'
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {

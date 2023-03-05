@@ -1,11 +1,11 @@
-import IEntityBinding from './IEntityBinding'
+import IEntityBinding from './abstract/IEntityBinding'
 import MultiBindingDIError from './errors/MultiBindingDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
-import IDependencyResolver from './IDepencencyResolver'
-import EntityActivator from './EntityActivator'
-import DIScope from './DIScope'
-import {
-    Lifecycle,
+import IDependencyResolver from './abstract/IDependencyResolver'
+import EntityActivator from './internal/EntityActivator'
+import DIScope from './internal/DIScope'
+import Lifecycle from './Lifecycle'
+import type {
     DIModuleFunction,
     TBindingName,
     TBindingsList,
@@ -45,7 +45,7 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
     public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
         let scope: DIScope<TypeMap> | undefined = this._scopes.get(key)
         if (scope != null && scope) {
-            if (!scope.isClosed)
+            if (!scope.isClosed())
                 return scope
         }
 
