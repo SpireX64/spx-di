@@ -9,6 +9,7 @@ export type TScopeKey = string | Symbol
 export type TBindingName = string | Symbol | null
 export type TBindingOptions = {
     name?: TBindingName,
+    override?: boolean,
 }
 
 export type TBindingsList<TypeMap extends object> = IEntityBinding<TypeMap, keyof TypeMap>[]

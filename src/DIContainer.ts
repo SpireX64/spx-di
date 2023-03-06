@@ -124,7 +124,7 @@ export class DIContainerBuilder<TypeMap extends object> {
             instance,
             factory: null,
         }
-        this.bind(binding)
+        this.bind(binding, options?.override)
         return this
     }
 
@@ -143,7 +143,7 @@ export class DIContainerBuilder<TypeMap extends object> {
             factory,
             instance: null,
         }
-        this.bind(binding)
+        this.bind(binding, options?.override)
         return this
     }
 
@@ -173,7 +173,15 @@ export class DIContainerBuilder<TypeMap extends object> {
         return new DIContainer(activator)
     }
 
-    private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>): void {
+    private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>, override?: boolean): void {
+        if (override) {
+            const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
+            if (currentBindingIndex >= 0) {
+                this._bindings[currentBindingIndex] = binding
+                return
+            }
+        }
+
         if (binding.lifecycle !== Lifecycle.Singleton) {
             const wasBound = this._bindings
                 .some(it => it.type === binding.type && it.name === binding.name)

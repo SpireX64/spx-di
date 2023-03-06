@@ -345,4 +345,22 @@ describe('DIContainerBuilder', () => {
         expect(bindingValueB).not.toBeNull()
         expect(bindingValueB?.instance).toBe(256)
     })
+
+    it('Override binding', () => {
+        // Arrange -------
+        const originValue = 'Foo'
+        const expectedValue = 'Bar'
+        const builder = DIContainer.builder<{ typeKey: string }>()
+            .bindInstance('typeKey', originValue)
+
+        // Act -----------
+        builder.bindInstance('typeKey', expectedValue, { override: true })
+
+        const actualBinding = builder.findBindingOf('typeKey')
+        const bindings = builder.getAllBindingsOf('typeKey')
+
+        // Assert --------
+        expect(actualBinding?.instance).toBe(expectedValue)
+        expect(bindings.length).toBe(1)
+    })
 });
