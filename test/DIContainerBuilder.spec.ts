@@ -182,8 +182,8 @@ describe('DIContainerBuilder', () => {
 
         // Act ----------
         builder
-            .bindInstance('typeKey', expectedValueA, 'A')
-            .bindInstance('typeKey', expectedValueB, 'B')
+            .bindInstance('typeKey', expectedValueA, { name: 'A' })
+            .bindInstance('typeKey', expectedValueB, { name: 'B' })
 
         const bindingDefault = builder.findBindingOf('typeKey')
         const bindingA = builder.findBindingOf('typeKey', 'A')
@@ -275,9 +275,9 @@ describe('DIContainerBuilder', () => {
         builder
             .bindInstance('typeKey', strings[0])
             .bindInstance('typeKey', strings[1])
-            .bindInstance('typeKey', strings[2], name)
-            .bindInstance('typeKey', strings[3], name)
-            .bindInstance('typeKey', strings[4], name)
+            .bindInstance('typeKey', strings[2], { name })
+            .bindInstance('typeKey', strings[3], { name })
+            .bindInstance('typeKey', strings[4], { name })
 
         const defaultBindings = builder.getAllBindingsOf('typeKey')
         const namedBindings = builder.getAllBindingsOf('typeKey', name)

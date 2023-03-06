@@ -355,8 +355,8 @@ describe('DIContainer', function () {
         const expectedValueB = 33
         const container = DIContainer.builder<{ typeKey: number }>()
             .bindInstance('typeKey', expectedDefaultValue)
-            .bindInstance('typeKey', expectedValueA, 'A')
-            .bindInstance('typeKey', expectedValueB, 'B')
+            .bindInstance('typeKey', expectedValueA, {name: 'A'})
+            .bindInstance('typeKey', expectedValueB, {name: 'B'})
             .build()
 
         // Act -----------

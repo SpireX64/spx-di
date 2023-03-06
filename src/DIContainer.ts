@@ -8,6 +8,7 @@ import Lifecycle from './Lifecycle'
 import type {
     DIModuleFunction,
     TBindingName,
+    TBindingOptions,
     TBindingsList,
     TInstanceFactory,
     TProvider,
@@ -71,14 +72,14 @@ export interface IConditionalBinder<TypeMap extends object> {
     bindInstance<Type extends keyof TypeMap>(
         type: Type,
         instance: TypeMap[Type],
-        name?: TBindingName,
+        options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap>
 
     bindFactory<Type extends keyof TypeMap>(
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
         lifecycle?: Lifecycle,
-        name?: TBindingName,
+        options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap>
 }
 
@@ -92,18 +93,18 @@ export class DIContainerBuilder<TypeMap extends object> {
             bindInstance<Type extends keyof TypeMap>(
                 type: Type,
                 instance: TypeMap[Type],
-                name?: TBindingName,
+                options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindInstance(type, instance, name)
+                if (condition) container.bindInstance(type, instance, options)
                 return container
             },
             bindFactory<Type extends keyof TypeMap>(
                 type: Type,
                 factory: TInstanceFactory<TypeMap, Type>,
                 lifecycle?: Lifecycle,
-                name?: TBindingName,
+                options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindFactory(type, factory, lifecycle, name)
+                if (condition) container.bindFactory(type, factory, lifecycle, options)
                 return container
             },
         }
@@ -112,13 +113,13 @@ export class DIContainerBuilder<TypeMap extends object> {
     public bindInstance<Type extends keyof TypeMap>(
         type: Type,
         instance: TypeMap[Type],
-        name: TBindingName = null,
+        options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (instance == null)
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
-            name,
+            name: options?.name ?? null,
             lifecycle: Lifecycle.Singleton,
             instance,
             factory: null,
@@ -131,13 +132,13 @@ export class DIContainerBuilder<TypeMap extends object> {
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
         lifecycle = Lifecycle.Singleton,
-        name: TBindingName = null,
+        options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
             throw new NullableBindingDIError(type.toString())
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
-            name,
+            name: options?.name ?? null,
             lifecycle,
             factory,
             instance: null,
