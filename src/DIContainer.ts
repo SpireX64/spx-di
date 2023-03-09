@@ -68,7 +68,6 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return new DIContainerBuilder<TypeMap>()
     }
 }
-
 export interface IConditionalBinder<TypeMap extends object> {
     bindInstance<Type extends keyof TypeMap>(
         type: Type,
@@ -88,6 +87,11 @@ export class DIContainerBuilder<TypeMap extends object> {
     private readonly _bindings: TBindingsList<TypeMap> = []
     private readonly _modules: DIModuleFunction<any, any>[] = []
 
+    /**
+     * Conditional binding.
+     * When param {@link condition} is false, skip next binding call.
+     * @param condition - binding condition
+     */
     public when(condition: boolean): IConditionalBinder<TypeMap> {
         const container = this
         return {
@@ -111,6 +115,12 @@ export class DIContainerBuilder<TypeMap extends object> {
         }
     }
 
+    /**
+     * Bind type with instance/value
+     * @param type Access key of the type
+     * @param instance instance of type to bind
+     * @param options - (opt.) Extra binding options
+     */
     public bindInstance<Type extends keyof TypeMap>(
         type: Type,
         instance: TypeMap[Type],
@@ -129,6 +139,13 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this
     }
 
+    /**
+     * Bind type with factory function
+     * @param type - Access key of the type
+     * @param factory - Factory function
+     * @param lifecycle - (opt.) Activated instance lifecycle (default = Singleton)
+     * @param options - (opt.) Extra binding options
+     */
     public bindFactory<Type extends keyof TypeMap>(
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
@@ -148,6 +165,11 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this
     }
 
+    /**
+     * Add module to container
+     * @param module - Module definition
+     * @returns Container builder expanded by {@link module} type map
+     */
     public useModule<ModuleTypeMap extends object>(module: DIModuleFunction<ModuleTypeMap, any>): DIContainerBuilder<TypeMap & ModuleTypeMap> {
         module(this)
         this._modules.push(module)
@@ -155,20 +177,41 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
     }
 
+    /**
+     * Checks is module was added
+     * @param module - module definition
+     * @returns true, when module already added to container
+     */
     public hasModule(module: DIModuleFunction<any, any>): boolean {
         return this._modules.includes(module)
     }
 
+    /**
+     * Find binding entity of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns binding entity of {@link type} or null
+     */
     public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
         const binding = this._bindings.find(it => it.type === type && it.name == name)
         if (binding == null) return null
         return binding as IEntityBinding<TypeMap, Type>
     }
 
-    public getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type>[] {
+    /**
+     * Returns all bindings entities of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns readonly list of bindings entities
+     */
+    public getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): readonly IEntityBinding<TypeMap, Type>[] {
         return this._bindings.filter(it => it.type === type && it.name === name) as IEntityBinding<TypeMap, Type>[]
     }
 
+    /**
+     * Finalize configuration and build container.
+     * All singleton instances will be activated.
+     */
     public build(): DIContainer<TypeMap> {
         const activator = new EntityActivator(this._bindings)
         return new DIContainer(activator)
@@ -197,6 +240,9 @@ export class DIContainerBuilder<TypeMap extends object> {
     }
 }
 
+/**
+ * Module definition function
+ */
 export const createDIModule = <TypeMap extends object, DependencyTypeMap extends object = {}>(
     moduleFunc: DIModuleFunction<TypeMap, DependencyTypeMap>,
 ) => moduleFunc;

@@ -13,11 +13,21 @@ function getTargetForLazyProxy<TypeMap extends object, Type extends keyof TypeMa
     return lazy.ref
 }
 
+/**
+ * Checks that given object is lazy instance
+ * @param obj - instance to check
+ */
 export function isLazyInstance(obj: unknown): boolean {
     // @ts-ignore
     return obj != null && Boolean(obj.isLazyInstance)
 }
 
+/**
+ * Create lazy instance by provider
+ * @param type - Access key of type
+ * @param provider - Instance provider function
+ * @returns lazy instance of type
+ */
 export function createLazyInstance<TypeMap extends object, Type extends keyof TypeMap>(
     type: Type,
     provider: TProvider<TypeMap[Type]>,
@@ -43,7 +53,7 @@ export function createLazyInstance<TypeMap extends object, Type extends keyof Ty
                 return true
             }
             return false
-        }
+        },
     })
     return proxy as TypeMap[Type]
 }

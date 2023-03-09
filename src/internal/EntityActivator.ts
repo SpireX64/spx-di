@@ -25,7 +25,12 @@ export default class EntityActivator<TypeMap extends object> {
         return bindings as ReadonlyArray<IEntityBinding<TypeMap, Type>>
     }
 
-
+    /**
+     * Activate instance of type by {@link binding}
+     * @param resolver - Dependencies resolver
+     * @param binding - Type binding
+     * @returns activated instance
+     */
     public activate<Type extends keyof TypeMap>(
         resolver: IDependencyResolver<TypeMap>,
         binding: IEntityBinding<TypeMap, Type>,
@@ -49,6 +54,11 @@ export default class EntityActivator<TypeMap extends object> {
         throw new NullableBindingDIError(getStringName(binding.type))
     }
 
+    /**
+     * Activate all instances with singleton lifecycle
+     * @param resolver - Dependencies resolver
+     * @returns map of activated singletons
+     */
     public activateSingletons(
         resolver: IDependencyResolver<TypeMap>,
     ): ReadonlyMap<IEntityBinding<TypeMap, keyof TypeMap>, TypeMap[keyof TypeMap]> {

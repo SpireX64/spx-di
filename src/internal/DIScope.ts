@@ -29,10 +29,17 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         }
     }
 
+    /** Checks is scope was closed */
     public isClosed(): boolean {
         return this._isClosed
     }
 
+    /**
+     * Returns activated instance from cache
+     * @param binding - Entity binding
+     * @param allowInheritedGet - Allows get instances from parent scope cache
+     * @private
+     */
     private getActivatedInstance<Type extends keyof TypeMap>(
         binding: IEntityBinding<TypeMap, Type>,
         allowInheritedGet: boolean,
@@ -125,6 +132,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         return createLazyInstance(binding.type, this.getProvider(type))
     }
 
+    /** Close this scope and dispose its instances */
     public close() {
         if (this._isClosed) return
         this._isClosed = true
