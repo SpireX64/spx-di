@@ -1,5 +1,5 @@
 import Lifecycle from '../Lifecycle'
-import IEntityBinding from '../abstract/IEntityBinding'
+import IEntityBinding, { getStringName } from '../abstract/IEntityBinding'
 import IDependencyResolver from '../abstract/IDependencyResolver'
 import NullableBindingDIError from '../errors/NullableBindingDIError'
 import DependencyCycleDIError from '../errors/DependencyCycleDIError'
@@ -46,7 +46,7 @@ export default class EntityActivator<TypeMap extends object> {
             return instance
         }
 
-        throw new NullableBindingDIError(binding.type.toString())
+        throw new NullableBindingDIError(getStringName(binding.type))
     }
 
     public activateSingletons(

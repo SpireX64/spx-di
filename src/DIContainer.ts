@@ -1,4 +1,4 @@
-import IEntityBinding from './abstract/IEntityBinding'
+import IEntityBinding, { getStringName } from './abstract/IEntityBinding'
 import MultiBindingDIError from './errors/MultiBindingDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
 import IDependencyResolver from './abstract/IDependencyResolver'
@@ -16,7 +16,8 @@ import type {
 } from './types'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
-    public static globalScopeKey: TScopeKey = Symbol('global')
+
+    public static readonly globalScopeKey: TScopeKey = Symbol('global')
     private readonly _globalScope: DIScope<TypeMap>
     private readonly _activator: EntityActivator<TypeMap>
     private readonly _scopes = new Map<TScopeKey, DIScope<TypeMap>>()
@@ -116,7 +117,7 @@ export class DIContainerBuilder<TypeMap extends object> {
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (instance == null)
-            throw new NullableBindingDIError(type.toString())
+            throw new NullableBindingDIError(getStringName(type))
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
@@ -135,7 +136,7 @@ export class DIContainerBuilder<TypeMap extends object> {
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
-            throw new NullableBindingDIError(type.toString())
+            throw new NullableBindingDIError(getStringName(type))
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
@@ -187,8 +188,8 @@ export class DIContainerBuilder<TypeMap extends object> {
                 .some(it => it.type === binding.type && it.name === binding.name)
             if (wasBound)
                 throw new MultiBindingDIError(
-                    binding.type.toString(),
-                    binding.name,
+                    getStringName(binding.type),
+                    getStringName(binding.name),
                     binding.lifecycle,
                 )
         }

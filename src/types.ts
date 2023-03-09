@@ -5,8 +5,8 @@ import { DIContainerBuilder } from './DIContainer'
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
     (resolver: IDependencyResolver<TypeMap>) => TypeMap[Type]
 
-export type TScopeKey = string | Symbol
-export type TBindingName = string | Symbol | null
+export type TScopeKey = string | symbol
+export type TBindingName = string | symbol | null
 export type TBindingOptions = {
     name?: TBindingName,
     override?: boolean,

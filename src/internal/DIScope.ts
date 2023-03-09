@@ -4,7 +4,7 @@ import IDependencyResolver from '../abstract/IDependencyResolver'
 import EntityActivator from './EntityActivator'
 import BindingNotFoundDIError from '../errors/BindingNotFoundDIError'
 import ClosedScopeDIError from '../errors/ClosedScopeDIError'
-import IEntityBinding from "../abstract/IEntityBinding";
+import IEntityBinding, { getStringName } from '../abstract/IEntityBinding'
 import { createLazyInstance } from './LazyInstance'
 
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
@@ -62,7 +62,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
 
         const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
-            throw new BindingNotFoundDIError(type.toString())
+            throw new BindingNotFoundDIError(getStringName(type))
 
         const isSingleton = binding.lifecycle === Lifecycle.Singleton
             || binding.lifecycle === Lifecycle.LazySingleton
@@ -112,7 +112,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
     public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
-            throw new BindingNotFoundDIError(type.toString())
+            throw new BindingNotFoundDIError(getStringName(type))
 
         const instance = this.getActivatedInstance(
             binding,
