@@ -50,7 +50,6 @@ export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends o
     builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
 ) => void
 
-
 /**
  * Utility type. Retrieves a TypeMap type from a module type
  * @see DIModuleFunction

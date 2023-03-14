@@ -115,7 +115,7 @@ describe('DIContainerBuilder', () => {
         expect(binding?.instance).toBeNull()
     })
 
-    it('Conditional binding', () => {
+    it('Conditional binding by boolean', () => {
         // Arrange -----
         const builder = DIContainer.builder<{
             foo: string
@@ -137,6 +137,36 @@ describe('DIContainerBuilder', () => {
         expect(fooBinding).not.toBeNull()
         expect(barBinding).toBeNull()
         expect(qweBinding).not.toBeNull()
+    })
+
+    it('Conditional binding by predicate', () => {
+        // Arrange -----------
+        const builder = DIContainer.builder<{
+            foo: string
+            bar: string
+            isFooBound: boolean
+            isBarBound: boolean
+        }>()
+
+        // Act --------------
+        const container = builder
+            .bindInstance('foo', 'Hello!')
+            .when(it => it.findBindingOf('foo') != null)
+                .bindInstance('isFooBound', true)
+            .when(it => it.findBindingOf('foo') == null)
+                .bindInstance('isFooBound', false)
+            .when(it => it.findBindingOf('bar') != null)
+                .bindInstance('isBarBound', true)
+            .when(it => it.findBindingOf('bar') == null)
+                .bindInstance('isBarBound', false)
+            .build()
+
+        const isFooBound = container.get('isFooBound')
+        const isBarBound = container.get('isBarBound')
+
+        // Assert -----------
+        expect(isFooBound).toBeTruthy()
+        expect(isBarBound).toBeFalsy()
     })
 
     it('Force nullable instance binding', () => {

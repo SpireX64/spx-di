@@ -83,7 +83,32 @@ export interface IConditionalBinder<TypeMap extends object> {
     ): DIContainerBuilder<TypeMap>
 }
 
-export class DIContainerBuilder<TypeMap extends object> {
+export interface IDIConfiguration<TypeMap extends object> {
+    /**
+     * Checks is module was added
+     * @param module - module definition
+     * @returns true, when module already added to container
+     */
+    hasModule(module: DIModuleFunction<any, any>): boolean
+
+    /**
+     * Find binding entity of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns binding entity of {@link type} or null
+     */
+    findBindingOf<Type extends keyof TypeMap>(type: Type, name?: TBindingName): IEntityBinding<TypeMap, Type> | null
+
+    /**
+     * Returns all bindings entities of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns readonly list of bindings entities
+     */
+    getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name?: TBindingName): readonly IEntityBinding<TypeMap, Type>[]
+}
+
+export class DIContainerBuilder<TypeMap extends object> implements IDIConfiguration<TypeMap> {
     private readonly _bindings: TBindingsList<TypeMap> = []
     private readonly _modules: DIModuleFunction<any, any>[] = []
 
@@ -92,16 +117,18 @@ export class DIContainerBuilder<TypeMap extends object> {
      * When param {@link condition} is false, skip next binding call.
      * @param condition - binding condition
      */
-    public when(condition: boolean): IConditionalBinder<TypeMap> {
-        const container = this
+    public when(condition: boolean | ((builder: IDIConfiguration<TypeMap>) => boolean)): IConditionalBinder<TypeMap> {
+        const builder: DIContainerBuilder<TypeMap> = this
+        const isAllowToBind = typeof condition === 'function' ? condition(this) : condition
         return {
             bindInstance<Type extends keyof TypeMap>(
                 type: Type,
                 instance: TypeMap[Type],
                 options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindInstance(type, instance, options)
-                return container
+                if (isAllowToBind)
+                    builder.bindInstance(type, instance, options)
+                return builder
             },
             bindFactory<Type extends keyof TypeMap>(
                 type: Type,
@@ -109,8 +136,9 @@ export class DIContainerBuilder<TypeMap extends object> {
                 lifecycle?: Lifecycle,
                 options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindFactory(type, factory, lifecycle, options)
-                return container
+                if (isAllowToBind)
+                    builder.bindFactory(type, factory, lifecycle, options)
+                return builder
             },
         }
     }
@@ -177,33 +205,16 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
     }
 
-    /**
-     * Checks is module was added
-     * @param module - module definition
-     * @returns true, when module already added to container
-     */
     public hasModule(module: DIModuleFunction<any, any>): boolean {
         return this._modules.includes(module)
     }
 
-    /**
-     * Find binding entity of given {@link type}
-     * @param type - Access key of type
-     * @param name - (opt.) Instance name
-     * @returns binding entity of {@link type} or null
-     */
     public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
         const binding = this._bindings.find(it => it.type === type && it.name == name)
         if (binding == null) return null
         return binding as IEntityBinding<TypeMap, Type>
     }
 
-    /**
-     * Returns all bindings entities of given {@link type}
-     * @param type - Access key of type
-     * @param name - (opt.) Instance name
-     * @returns readonly list of bindings entities
-     */
     public getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): readonly IEntityBinding<TypeMap, Type>[] {
         return this._bindings.filter(it => it.type === type && it.name === name) as IEntityBinding<TypeMap, Type>[]
     }
@@ -231,8 +242,8 @@ export class DIContainerBuilder<TypeMap extends object> {
                 .some(it => it.type === binding.type && it.name === binding.name)
             if (wasBound)
                 throw new MultiBindingDIError(
-                    getStringName(binding.type),
-                    getStringName(binding.name),
+                    binding.type,
+                    binding.name,
                     binding.lifecycle,
                 )
         }
