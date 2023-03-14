@@ -16,12 +16,13 @@
   "keywords": [
     "node",
     "javascript",
+    "js",
     "typescript",
+    "ts",
     "ioc",
+    "inversion of control",
     "di",
-    "dependency injection",
-    "dependency inversion",
-    "inversion of control"
+    "dependency injection"
   ],
   "main": "lib/index.js",
   "jsnext:main": "es/index.js",
