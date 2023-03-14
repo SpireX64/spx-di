@@ -240,6 +240,9 @@ export class DIContainerBuilder<TypeMap extends object> {
     }
 }
 
+
+export type TypeMapOfContainer<TContainer> = TContainer extends DIContainer<infer TypeMap> ? TypeMap : never
+
 /**
  * Module definition function
  */
