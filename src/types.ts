@@ -28,6 +28,12 @@ export type TBindingOptions = {
     name?: TBindingName,
 
     /**
+     * Scope(s) in which the instance is available to resolve
+     * @default null
+     */
+    scope?: TScopeKey | TScopeKey[] | null
+
+    /**
      * Resolve method on binding conflict.
      * - 'bind' - Multibinding
      * - 'override' - Override existing binding

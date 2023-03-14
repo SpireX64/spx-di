@@ -160,6 +160,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
+            scope: options?.scope ?? null,
             lifecycle: Lifecycle.Singleton,
             instance,
             factory: null,
@@ -186,6 +187,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
+            scope: options?.scope ?? null,
             lifecycle,
             factory,
             instance: null,

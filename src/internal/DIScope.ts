@@ -67,7 +67,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         if (this._isClosed)
             throw new ClosedScopeDIError(this.key)
 
-        const binding = this._activator.findBindingOf(type, name)
+        const binding = this._activator.findBindingOf(type, name, this.key)
         if (binding == null)
             throw new BindingNotFoundDIError(getStringName(type))
 

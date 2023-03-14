@@ -3,7 +3,8 @@ import {
     Lifecycle,
     IDisposable,
     isLazyInstance,
-    BindingNotFoundDIError
+    BindingNotFoundDIError,
+    TScopeKey,
 } from '../src'
 
 describe('DIContainer', function () {
@@ -251,6 +252,40 @@ describe('DIContainer', function () {
         // Assert ------
         expect(object1).toBe(object2) // Global scope was not closed
         expect(factory.mock.calls.length).toBe(1) // Object instance was re-used
+    })
+
+    it('Limit instance scope', () => {
+        // Arrange -----
+        const allowedScopeName: TScopeKey = 'scope'
+
+        const container = DIContainer.builder<{
+            typeKey: object
+        }>()
+            .bindFactory(
+                'typeKey',
+                () => new Object(),
+                Lifecycle.Scoped,
+                { scope: allowedScopeName },
+            )
+            .build()
+
+        let errorAtGlobalScope: BindingNotFoundDIError | null = null
+
+        // Act ---------
+        try {
+            container.get('typeKey')
+        } catch (err) {
+            if (err instanceof BindingNotFoundDIError)
+                errorAtGlobalScope = err
+        }
+
+        const instanceAtAllowedScope = container
+            .scope(allowedScopeName)
+            .get('typeKey')
+
+        // Assert ------
+        expect(errorAtGlobalScope).not.toBeNull()
+        expect(instanceAtAllowedScope).not.toBeNull()
     })
 
     it('Get instance provider', () => {

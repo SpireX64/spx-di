@@ -1,5 +1,5 @@
 import Lifecycle from '../Lifecycle'
-import type { TBindingName, TInstanceFactory } from '../types'
+import type { TBindingName, TInstanceFactory, TScopeKey } from '../types'
 
 /**
  * Entity of type binding.
@@ -20,6 +20,9 @@ export default interface IEntityBinding<TypeMap extends object, Type extends key
 
     /** Instance factory. */
     readonly factory: TInstanceFactory<TypeMap, Type> | null
+
+    /** Scope(s) in which the instance is available to resolve */
+    readonly scope: TScopeKey | TScopeKey[] | null
 }
 
 /**
