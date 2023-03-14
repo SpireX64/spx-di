@@ -12,23 +12,30 @@ export type TScopeKey = string | symbol
 /** Binding name type */
 export type TBindingName = string | symbol | null
 
+export type TConflictResolution =
+    | 'bind'
+    | 'override'
+    | 'throw'
+    | 'skip'
+
 /** Binding options */
 export type TBindingOptions = {
     /**
      * Name of binding.
      * Allows to inject specific instance by name.
-     * (default = null)
+     * @default null
      */
     name?: TBindingName,
 
     /**
-     * Binding override.
-     * If the type already had a binding,
-     * then a call with this flag will overwrite it,
-     * instead of adding an extra binding.
-     * (default = false)
+     * Resolve method on binding conflict.
+     * - 'bind' - Multibinding
+     * - 'override' - Override existing binding
+     * - 'throw' - Throw error
+     * - 'skip' - Leave current binding
+     * @default bind
      */
-    override?: boolean,
+    conflict?: TConflictResolution,
 }
 
 /** Array list of bindings */

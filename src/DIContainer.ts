@@ -1,6 +1,7 @@
 import IEntityBinding, { getStringName } from './abstract/IEntityBinding'
 import MultiBindingDIError from './errors/MultiBindingDIError'
 import NullableBindingDIError from './errors/NullableBindingDIError'
+import BindingConflictDIError from './errors/BindingConflictDIError'
 import IDependencyResolver from './abstract/IDependencyResolver'
 import EntityActivator from './internal/EntityActivator'
 import DIScope from './internal/DIScope'
@@ -163,7 +164,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
             instance,
             factory: null,
         }
-        this.bind(binding, options?.override)
+        this.bind(binding, options)
         return this
     }
 
@@ -189,7 +190,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
             factory,
             instance: null,
         }
-        this.bind(binding, options?.override)
+        this.bind(binding, options)
         return this
     }
 
@@ -228,24 +229,33 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         return new DIContainer(activator)
     }
 
-    private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>, override?: boolean): void {
-        if (override) {
-            const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
-            if (currentBindingIndex >= 0) {
-                this._bindings[currentBindingIndex] = binding
-                return
-            }
-        }
+    private bind<Type extends keyof TypeMap>(
+        binding: IEntityBinding<TypeMap, Type>,
+        options?: TBindingOptions,
+    ): void {
+        const isConflict = this._bindings
+            .some(it => it.type === binding.type && it.name === binding.name)
 
-        if (binding.lifecycle !== Lifecycle.Singleton) {
-            const wasBound = this._bindings
-                .some(it => it.type === binding.type && it.name === binding.name)
-            if (wasBound)
-                throw new MultiBindingDIError(
-                    binding.type,
-                    binding.name,
-                    binding.lifecycle,
-                )
+        if (isConflict) {
+            const conflictResolution = options?.conflict ?? 'bind'
+            if (conflictResolution == 'throw') {
+                throw new BindingConflictDIError(binding.type, binding.name)
+            } else if (conflictResolution == 'skip') {
+                return
+            } else if (conflictResolution === 'bind') {
+                if (binding.lifecycle !== Lifecycle.Singleton)
+                    throw new MultiBindingDIError(
+                        binding.type,
+                        binding.name,
+                        binding.lifecycle,
+                    )
+            } else if (conflictResolution == 'override') {
+                const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
+                if (currentBindingIndex >= 0) {
+                    this._bindings[currentBindingIndex] = binding
+                    return
+                }
+            }
         }
         this._bindings.push(binding)
     }

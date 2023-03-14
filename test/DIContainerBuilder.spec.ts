@@ -5,6 +5,7 @@ import {
     Lifecycle,
     NullableBindingDIError,
     MultiBindingDIError,
+    BindingConflictDIError,
     TypeMapOfModule
 } from '../src'
 
@@ -376,7 +377,7 @@ describe('DIContainerBuilder', () => {
         expect(bindingValueB?.instance).toBe(256)
     })
 
-    it('Override binding', () => {
+    it('Override binding on conflict', () => {
         // Arrange -------
         const originValue = 'Foo'
         const expectedValue = 'Bar'
@@ -384,7 +385,7 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', originValue)
 
         // Act -----------
-        builder.bindInstance('typeKey', expectedValue, { override: true })
+        builder.bindInstance('typeKey', expectedValue, { conflict: 'override' })
 
         const actualBinding = builder.findBindingOf('typeKey')
         const bindings = builder.getAllBindingsOf('typeKey')
@@ -393,4 +394,47 @@ describe('DIContainerBuilder', () => {
         expect(actualBinding?.instance).toBe(expectedValue)
         expect(bindings.length).toBe(1)
     })
-});
+
+
+    it('Skip binding on conflict', () => {
+        // Arrange ------
+        const expectedValue = 'Foo'
+        const newValue = 'Bar'
+
+        const builder = DIContainer.builder<{ typeKey: string }>()
+            .bindInstance('typeKey', expectedValue)
+
+        // Act ----------
+        builder.bindInstance('typeKey', newValue, { conflict: 'skip' })
+
+        const actualBinding = builder.findBindingOf('typeKey')
+        const bindings = builder.getAllBindingsOf('typeKey')
+
+        // Assert -------
+        expect(actualBinding?.instance).toBe(expectedValue)
+        expect(bindings.length).toBe(1)
+    })
+
+    it('Throw on binding conflict', () => {
+        // Arrange ------
+        const firstValue = 'Foo'
+        const secondValue = 'Bar'
+
+        const builder = DIContainer.builder<{ typeKey: string }>()
+            .bindInstance('typeKey', firstValue)
+
+        let error: BindingConflictDIError | null = null
+
+        // Act ----------
+        try {
+            builder.bindInstance('typeKey', secondValue, { conflict: 'throw' })
+        } catch (err) {
+            if (err instanceof BindingConflictDIError)
+                error = err
+        }
+
+        // Assert -------
+        expect(error).not.toBeNull()
+        expect(error?.message).toContain('typeKey')
+    })
+})
