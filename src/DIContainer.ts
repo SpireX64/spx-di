@@ -15,6 +15,8 @@ import type {
     TProvider,
     TScopeKey,
 } from './types'
+import { TRequiredTypeToken } from './types'
+import { RequiredBindingNotProvidedDIError } from './errors'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
 
@@ -111,6 +113,7 @@ export interface IDIConfiguration<TypeMap extends object> {
 
 export class DIContainerBuilder<TypeMap extends object> implements IDIConfiguration<TypeMap> {
     private readonly _bindings: TBindingsList<TypeMap> = []
+    private readonly _requiredTypes: TRequiredTypeToken<TypeMap, keyof TypeMap>[] = []
     private readonly _modules: DIModuleFunction<any, any>[] = []
 
     /**
@@ -197,6 +200,31 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
     }
 
     /**
+     * Requiring Type Binding in Configuration.
+     * Throws error if required binding not provided
+     * @param type - Key of required type
+     * @param options - Additional options
+     */
+    public requireType<Type extends keyof TypeMap>(
+        type: Type,
+        options?: {
+            /** Specific instance name */
+            name?: TBindingName
+
+            /** Available in scope */
+            scope?: TScopeKey
+        },
+    ): DIContainerBuilder<TypeMap> {
+        const token: TRequiredTypeToken<TypeMap, Type> = {
+            type,
+            name: options?.name ?? null,
+            scope: options?.scope ?? null,
+        }
+        this._requiredTypes.push(token)
+        return this
+    }
+
+    /**
      * Add module to container
      * @param module - Module definition
      * @returns Container builder expanded by {@link module} type map
@@ -227,8 +255,31 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
      * All singleton instances will be activated.
      */
     public build(): DIContainer<TypeMap> {
+        this.verifyRequiredTypes()
         const activator = new EntityActivator(this._bindings)
         return new DIContainer(activator)
+    }
+
+    /**
+     * Check type requirements. Throws error if required binding not found.
+     * @throws RequiredBindingNotProvidedDIError
+     * @private
+     */
+    private verifyRequiredTypes(): void {
+        if (this._requiredTypes.length === 0) return
+        for (let i = 0; i < this._requiredTypes.length; ++i) {
+            const token = this._requiredTypes[i]
+            const typeBindings = this.getAllBindingsOf(token.type, token.name)
+            if (typeBindings.length === 0)
+                throw new RequiredBindingNotProvidedDIError(token.type, token.name, token.scope)
+            if (token.scope != null) {
+                const availableInScope = typeBindings.some(({ scope }) =>
+                    scope == null || (Array.isArray(scope) ? scope?.includes(token.scope!) : scope === token.scope)
+                )
+                if (!availableInScope)
+                    throw new RequiredBindingNotProvidedDIError(token.type, token.name, token.scope)
+            }
+        }
     }
 
     private bind<Type extends keyof TypeMap>(

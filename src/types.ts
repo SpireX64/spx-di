@@ -12,6 +12,12 @@ export type TScopeKey = string | symbol
 /** Binding name type */
 export type TBindingName = string | symbol | null
 
+export type TRequiredTypeToken<TypeMap extends object, Type extends keyof TypeMap> = {
+    type: Type,
+    name: TBindingName | null,
+    scope: TScopeKey | null
+}
+
 export type TConflictResolution =
     | 'bind'
     | 'override'

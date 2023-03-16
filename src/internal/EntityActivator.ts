@@ -21,10 +21,10 @@ export default class EntityActivator<TypeMap extends object> {
         const binding = this._bindings.find(it =>
             it.type === type &&
             it.name == name &&
-            (it.scope == null || Array.isArray(it.scope)
-                ? it.scope?.includes(currentScope ?? '')
+            (it.scope == null || (Array.isArray(it.scope)
+                ? it.scope?.includes(currentScope!)
                 : it.scope === currentScope)
-            )
+            ))
         if (!binding) return null
         return binding as IEntityBinding<TypeMap, Type>
     }

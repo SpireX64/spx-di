@@ -6,7 +6,8 @@ import {
     NullableBindingDIError,
     MultiBindingDIError,
     BindingConflictDIError,
-    TypeMapOfModule
+    RequiredBindingNotProvidedDIError,
+    TypeMapOfModule,
 } from '../src'
 
 describe('DIContainerBuilder', () => {
@@ -436,5 +437,117 @@ describe('DIContainerBuilder', () => {
         // Assert -------
         expect(error).not.toBeNull()
         expect(error?.message).toContain('typeKey')
+    })
+
+    it('Throw if required type binding not bound', () => {
+        // Arrange ------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey')
+
+        let error: RequiredBindingNotProvidedDIError | null = null
+
+        // Act ----------
+        try {
+            builder.build()
+        } catch (err) {
+            if (err instanceof RequiredBindingNotProvidedDIError) {
+                error = err
+            }
+        }
+
+        // Assert -------
+        expect(error).not.toBeNull()
+        expect(error?.message).toContain('typeKey')
+    })
+
+    it('Throw if required named type binding not bound', () => {
+        // Arrange ---------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey', { name: 'foo' })
+            .bindInstance('typeKey', 'Hello')
+
+        // Act -------------
+        let error: RequiredBindingNotProvidedDIError | null = null
+
+        // Act ----------
+        try {
+            builder.build()
+        } catch (err) {
+            if (err instanceof RequiredBindingNotProvidedDIError) {
+                error = err
+            }
+        }
+
+        // Assert -------
+        expect(error).not.toBeNull()
+        expect(error?.message).toContain('typeKey:foo')
+    })
+
+    it('Throw if required type not provided in scope', () => {
+        // Arrange ---------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey', { scope: 'expected' })
+            .bindInstance('typeKey', 'Hello', { scope: 'foo' })
+
+        // Act -------------
+        let error: RequiredBindingNotProvidedDIError | null = null
+
+        try {
+            builder.build()
+        } catch (err) {
+            if (err instanceof RequiredBindingNotProvidedDIError) {
+                error = err
+            }
+        }
+
+        // Assert -------
+        expect(error).not.toBeNull()
+        expect(error?.message).toContain('typeKey')
+        expect(error?.message).toContain('"expected"')
+        expect(error?.type).toBe('typeKey')
+        expect(error?.instanceName).toBeNull()
+        expect(error?.scope).toBe('expected')
+    })
+
+    it('No throw if required type was provided', () => {
+        // Arrange ---------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey')
+            .bindInstance('typeKey', 'Hello')
+
+        // Assert ----------
+        expect(() => builder.build()).not.toThrow()
+    })
+
+    it('No throw if required named type was provided', () => {
+        // Arrange ---------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey', { name: 'foo' })
+            .bindInstance('typeKey', 'Hello', { name: 'foo' })
+
+        // Assert ----------
+        expect(() => builder.build()).not.toThrow()
+    })
+
+    it('No throw if required type was provided in scope', () => {
+        // Arrange ---------
+        const builder = DIContainer.builder<{
+            typeKey: string,
+        }>()
+            .requireType('typeKey', { scope: 'expected' })
+            .bindInstance('typeKey', 'Hello', { scope: 'expected' })
+
+        // Assert ----------
+        expect(() => builder.build()).not.toThrow()
     })
 })
