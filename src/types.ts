@@ -11,6 +11,20 @@ export type TScopeKey = string | symbol
 /** Binding name type */
 export type TBindingName = string | symbol | null
 
+/** Auto-disposable interface */
+export interface IDisposable {
+    /** Called when the parent scope has been closed */
+    dispose(): void
+}
+
+export interface IScopeDisposable extends IDisposable {
+    /** The key of the scope to which this disposable belongs */
+    readonly scopeKey: TScopeKey
+
+    /** Check that the scope has been deleted */
+    isScopeDisposed(): boolean
+}
+
 export type TRequiredTypeToken<TypeMap extends object, Type extends keyof TypeMap> = {
     type: Type,
     name: TBindingName | null,
@@ -57,9 +71,3 @@ export type TReadonlyBindingsList<TypeMap extends object> = readonly IEntityBind
 
 /** Instance provider of specific type */
 export type TProvider<Type> = () => Type
-
-/** Auto-disposable interface */
-export interface IDisposable {
-    /** Called when the parent scope has been closed */
-    dispose(): void
-}

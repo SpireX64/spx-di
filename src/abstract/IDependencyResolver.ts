@@ -1,4 +1,4 @@
-import { TBindingName, TProvider } from '../types'
+import { IScopeDisposable, TBindingName, TProvider } from '../types'
 
 export default interface IDependencyResolver<TypeMap extends object> {
     /**
@@ -44,4 +44,7 @@ export default interface IDependencyResolver<TypeMap extends object> {
      * @returns instance or lazy-instance of given type
      */
     getLazy<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type]
+
+    /** Request disposable of scope */
+    getScopeDisposable(): IScopeDisposable
 }

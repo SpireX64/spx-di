@@ -5,6 +5,7 @@ import DIScope from './internal/DIScope'
 import DIError from './DIError'
 import Lifecycle from './Lifecycle'
 import type {
+    IScopeDisposable,
     TBindingName,
     TBindingOptions,
     TBindingsList,
@@ -47,10 +48,15 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return this._globalScope.getProvider(type, name)
     }
 
+    public getScopeDisposable(scopeKey?: TScopeKey): IScopeDisposable {
+        const scopeRef = scopeKey != null ? this.scope(scopeKey) : this._globalScope
+        return scopeRef.getScopeDisposable()
+    }
+
     public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
         let scope: DIScope<TypeMap> | undefined = this._scopes.get(key)
         if (scope != null && scope) {
-            if (!scope.isClosed())
+            if (!scope.isDisposed())
                 return scope
         }
 
@@ -59,12 +65,12 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return scope
     }
 
-    public closeScope(key: TScopeKey): void {
+    public disposeScope(key: TScopeKey): void {
         if (key === DIContainer.globalScopeKey) return
         const scope = this._scopes.get(key)
         if (!scope) return
         this._scopes.delete(key)
-        scope.close()
+        scope.dispose()
     }
 
     public static builder<TypeMap extends object = {}>(){

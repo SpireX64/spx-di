@@ -6,6 +6,7 @@ import {
     DIError,
     DIErrorType,
     TScopeKey,
+    IScopeDisposable,
 } from '../src'
 
 describe('DIContainer', function () {
@@ -255,7 +256,7 @@ describe('DIContainer', function () {
 
         // Act --------------
         const object1 = container.scope(scopeKey).get('typeKey')
-        container.closeScope('A')
+        container.disposeScope('A')
         const object2 = container.scope(scopeKey).get('typeKey')
 
         // Assert -----------
@@ -273,7 +274,7 @@ describe('DIContainer', function () {
 
         // Act ---------
         const object1 = container.scope(DIContainer.globalScopeKey).get('typeKey')
-        container.closeScope(DIContainer.globalScopeKey)
+        container.disposeScope(DIContainer.globalScopeKey)
         const object2 = container.scope(DIContainer.globalScopeKey).get('typeKey')
 
         // Assert ------
@@ -471,10 +472,80 @@ describe('DIContainer', function () {
 
         // Act --------------
         const instDisposable = container.scope(scopeKey).get('disposable')
-        container.closeScope(scopeKey)
+        container.disposeScope(scopeKey)
 
         // Assert -----------
         expect(instDisposable).not.toBeNull()
         expect(disposeMethod.mock.calls.length).toBe(1) // "dispose()" was called
+    })
+
+    it('Get global scope disposable', () => {
+        // Arrange ----------
+        const disposeFunction = jest.fn()
+        const container = DIContainer.builder<{
+            typeKey: object
+        }>()
+            .bindFactory('typeKey', () => ({ dispose: disposeFunction }), Lifecycle.Scoped)
+            .build()
+
+        // Act --------------
+        const scopedObject = container.get('typeKey')
+        const disposable = container.getScopeDisposable()
+        disposable.dispose()
+
+        // Assert -----------
+        expect(scopedObject).not.toBeNull()
+        expect(disposable).not.toBeNull()
+        expect(disposable.scopeKey).toBe(DIContainer.globalScopeKey)
+        expect(disposable.isScopeDisposed()).toBeFalsy() // Global scope can't be disposed, but no error
+        expect(disposeFunction.mock.calls.length).toBe(0)
+    })
+
+    it('Get specific scope disposable', () => {
+        // Arrange -----------
+        const expectedScopeKey: TScopeKey = Symbol('foo')
+        const disposeFunction = jest.fn()
+
+        const container = DIContainer.builder<{
+            typeKey: object
+        }>()
+            .bindFactory('typeKey', () => ({ dispose: disposeFunction }), Lifecycle.Scoped)
+            .build()
+
+        // Act ----------------
+        const scopedObject = container.scope(expectedScopeKey).get('typeKey')
+        const disposable = container.getScopeDisposable(expectedScopeKey)
+        disposable.dispose()
+
+        // Assert -------------
+        expect(scopedObject).not.toBeNull()
+        expect(disposable).not.toBeNull()
+        expect(disposable.scopeKey).toBe(expectedScopeKey)
+        expect(disposable.isScopeDisposed()).toBeTruthy()
+        expect(disposeFunction.mock.calls.length).toBe(1)
+    })
+
+    it('Provide current scope disposable to instance', () => {
+        // Arrange --------
+        const expectedScopeKey: TScopeKey = Symbol('foo')
+        const disposeFunction = jest.fn()
+
+        const container = DIContainer.builder<{
+            'typeKey': { scopeDisposable: IScopeDisposable },
+        }>()
+            .bindFactory('typeKey', r => ({
+                scopeDisposable: r.getScopeDisposable(),
+                dispose: disposeFunction,
+            }), Lifecycle.Scoped)
+            .build()
+
+        // Act ------------
+        const obj = container.scope(expectedScopeKey).get('typeKey')
+        obj.scopeDisposable.dispose()
+
+        // Assert ---------
+        expect(obj.scopeDisposable.scopeKey).toBe(expectedScopeKey)
+        expect(obj.scopeDisposable.isScopeDisposed()).toBeTruthy()
+        expect(disposeFunction.mock.calls.length).toBe(1)
     })
 })
