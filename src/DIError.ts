@@ -26,10 +26,10 @@ export default class DIError {
         )
     }
 
-    public static bindingNotFound(type: string | symbol | number, bindingName: TBindingName): DIError {
+    public static bindingNotFound(type: string | symbol | number, bindingName: TBindingName, scope: TScopeKey): DIError {
         return new DIError(
             DIErrorType.BindingNotFound,
-            `Binding of type "${getTypeName(type, bindingName)}" not found`,
+            `Binding of type "${getTypeName(type, bindingName)}" not found in scope ${getStringName(scope)}`,
         )
     }
 

@@ -1,12 +1,12 @@
 import {
     DIContainer,
-    Lifecycle,
-    IDisposable,
-    isLazyInstance,
     DIError,
     DIErrorType,
-    TScopeKey,
+    IDisposable,
     IScopeDisposable,
+    isLazyInstance,
+    Lifecycle,
+    TScopeKey,
 } from '../src'
 
 describe('DIContainer', function () {
@@ -31,7 +31,7 @@ describe('DIContainer', function () {
 
     it('Get optional value without binding', () => {
         // Arrange -----
-        const container = DIContainer.builder<{value: string}>().build()
+        const container = DIContainer.builder<{ value: string }>().build()
 
         // Act ---------
         const value = container.getOptional('value')
@@ -293,7 +293,7 @@ describe('DIContainer', function () {
                 'typeKey',
                 () => new Object(),
                 Lifecycle.Scoped,
-                { scope: allowedScopeName },
+                {scope: allowedScopeName},
             )
             .build()
 
@@ -320,7 +320,7 @@ describe('DIContainer', function () {
     it('Get instance provider', () => {
         // Arrange ----
         const expectedValue = 42
-        const factory = jest.fn(r => ({ value: r.get('value') }))
+        const factory = jest.fn(r => ({value: r.get('value')}))
 
         const container = DIContainer.builder<{
             value: number,

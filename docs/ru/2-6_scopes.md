@@ -2,10 +2,9 @@
 Контейнер поддерживает области доступности.
 Это позволяет иметь один экземпляр типа на область.
 
-## Scoped экземпляр
-Такое поведение экземплярам обеспечивает жизненный цикл `Scoped`.
-Если требуется чтобы экземпляр был доступен только в пределах области,
-то нужно указать ему `Scoped` жизненный цикл при конфигурации контейнера:
+## Scoped Жизненный цикл
+Если требуется, чтобы экземпляр существовал только в пределах области,
+то можно задать ему жизненный цикл `Scoped` при конфигурации контейнера:
 
 ```ts
 builder
@@ -15,6 +14,7 @@ builder
         Lifecycle.Scoped, // Ограничен областью доступности
     )
 ```
+Когда область будет закрыта, все ссылки на экземпляры, что хранятся в данной области, будут удалены.
 
 ## Создание областей
 Область создается при первом обращении к ней с помощью метода `scope()`:
@@ -22,30 +22,17 @@ builder
 declare function scope(key: TScopeKey): IDependencyResolver
 ```
 где,
-- `key` - Уникальный идентификатор области. 
-          Может принимать значения типов `string` и `symbol`.
+- `key` - Уникальный идентификатор (ключ) области.
+  Может принимать значения типов `string` и `symbol`.
 
-Возвращает объект, с помощью которого можно получать экземпляры
-из данной области.
-
-## Получение экземпляров области
-После создания области, можно попросить ее предоставить
-необходимый экземпляр:
-
-```ts
-const instA = container.scope('my-scope').get(Types.MyType)
-const instB = container.scope('my-scope').get(Types.MyType)
-const instC = container.scope('other').get(Types.MyType)
-
-console.assert(instA === instB) // Один и тот же экземпляр
-console.assert(instA !== instC) // Разные экземпляры
-```
+После вызова, возвращает объект будет предоставлять экземпляры из этой области.
+При повторном вызове с тем же ключом, если область не была закрыта, вернется тот же объект.
 
 ## Закрытие области
 Если область доступности больше не нужна,
 то ее нужно закрыть с помощью метода `closeScope`:
 ```ts
-declare function closeScope(key: TScopeKey): void
+declare function disposeScope(scopeKey: TScopeKey): void
 ```
 
 После чего область будет закрыта и все ссылки на ее экземпляры
@@ -57,7 +44,7 @@ declare function closeScope(key: TScopeKey): void
 ```ts
 const instA1 = container.scope('A').get(Types.MyType)
 
-container.closeScope('A') // Закрываем область 'A'
+container.disposeScope('A') // Закрываем область 'A'
 // Все экземпляры области 'A' были удалены из контейнера
 
 const instA2 = container.scope('A').get(Types.MyType)
@@ -67,8 +54,138 @@ const instA2 = container.scope('A').get(Types.MyType)
 console.assert(instA1 !== instA2) // разные экземпляры
 ```
 
+## Глобальная область
+При создании контейнера, с ним создается и глобальная область.
+В основном в ней хранятся все экземпляры с жизненными циклами `Singleton` и `LazySingleton`,
+Но так же и `Scoped` экземпляры, созданные в этой области.
 
-### Авто-очистка экземпляров
+_Глобальную область невозможно закрыть._
+
+Если запросить `Scoped` экземпляр в глобальной области,
+его жизненный цикл будет вести себя как `LazySingleton`.
+При этом теряется возможность удалить такой экземпляр.
+
+Ключ глобальной области можно получить из статической переменной контейнера: `DIContainer.globalScopeKey`.
+
+Когда мы просим контейнер предоставить какой-либо экземпляр,
+он обращается к этой самой глобальной области.
+То есть следующие вызовы идентичны:
+```ts
+container.get(Types.MyService)
+container.scope(DIContainer.globalScopeKey).get(Types.MyService)
+```
+
+## Получение экземпляров в области
+После создания области, можно попросить ее предоставить необходимый экземпляр.
+Жизненный цикл `Scoped` гарантирует, что будет создан только один экземпляр типа в пределах одной области.
+
+Singleton-экземпляры принадлежат только глобальной области.
+Transient-экземпляры не могут принадлежать областям.
+
+```ts
+const instA = container.scope('my-scope').get(Types.MyType)
+const instB = container.scope('my-scope').get(Types.MyType)
+const instC = container.scope('other').get(Types.MyType)
+
+console.assert(instA === instB) // Один и тот же экземпляр
+console.assert(instA !== instC) // Разные экземпляры
+```
+
+## Ограничение получения экземпляров в области
+Контейнер умеет ограничивать возможность получать экземпляры типа определенной областью.
+Например, чтобы получить гарантию, что он используется только в ней.
+
+Для этого у привязки есть опция `scope`, где можно указать ключ области,
+в которой экземпляр может быть получен.
+
+При этом экземпляр может иметь любой жизненный цикл. Опция `scope` ограничивает только то, где можно получить экземпляр, 
+но не влияет на жизненный цикл самого экземпляра.
+
+```ts
+const container = builder
+    .bindFactory(
+        Types.MyType,
+        () => new MyTypeImpl(),
+        Lifecycle.LazySingleton, // жизненный цикл не ограничен областью
+        { scope: 'my-scope' },   // получение ограничего областью "my-scope"
+    )
+    .build()
+
+container.scope('my-scope').get(Types.MyType) // OK
+container.scope('other-scope').get(Types.MyType) // DIError: Binding of type "MyType" not found in scope "other-scope"
+container.get(Types.MyType) // Error: Binding of type "MyType" not found in scope "global"
+```
+
+Можно указать массив ключей, чтобы дать доступ к экземпляру из нескольких областей:
+
+```ts
+const container = builder
+    .bindInstance(
+        Types.SecureKey,
+        'AAAAAAA-AAAAA-AAAAA-AAAAAAAAA',
+        { scope: ['A', 'B'] }, // Доступно только в областях 'A' и 'B'
+    )
+    .build()
+
+container.scope('A').get(Types.SecureKey) // OK
+container.scope('B').get(Types.SecureKey) // OK
+container.scope('C').get(Types.SecureKey) // DIError: Binding of type "SecureKey" not found in scope "C"
+container.get(Types.SecureKey) // DIError: Binding of type "SecureKey" not found in scope "global"
+```
+
+## Получение объекта для закрытия области
+Области может закрывать только контейнер. 
+Но при этом не хотелось бы передавать ссылку на контейнер,
+чтобы компоненты не могли произвольно получать любые экземпляры из него.
+
+Поэтому контейнер может предоставить делегат "IScopeDisposable",
+который может закрыть область без помощи контейнера.
+
+```ts
+interface IScopeDisposable {
+    readonly scopeKey: TScopeKey
+
+    isScopeDisposed(): boolean
+    
+    dispose(): void
+}
+```
+- `scopeKey` - ключ области на которую он ссылается;
+- `isScopeDisposed` - проверяет, была ли область закрыта;
+- `dispose` - выполняет закрытие области.
+
+Получить такой делегат можно напрямую из контейнера:
+```ts
+container.getScopeDisposable(scopeKey)
+```
+Или с помощью фабрики, при создании экземпляра:
+```ts
+builder
+    .bindFactory(
+        'myService',
+        r => new MyService(
+            r.getScopeDisposable(),
+        ),
+        Lifecycle.Scoped,
+    )
+```
+Фабрика предоставляет `IScopeDisposable` области, которой принадлежит текущий экземпляр.
+То есть экземпляр должен быть ограничен этой областью или он должен быть с жизненным циклом "Scoped" и должен быть создан в ней.
+
+```ts
+const container = builder
+    .bindFactory('service1', () => {}, Lifecycle.Singleton)
+    .bindFactory('service2', () => {}, Lifecycle.Scoped)
+    .bindFactory('service3', () => {}, Lifecycle.Singleton, { scope: 'foo' })
+    .build()
+
+const s1 = container.scope('foo').get('service1') // Принадлежит области global
+const s2 = container.get('service2')              // Принадлежит области global
+const s3 = container.scope('foo').get('service2') // Принадлежит области 'foo'
+const s4 = container.scope('foo').get('service3') // Принадлежит области 'foo'
+```
+
+## Авто-очистка экземпляров
 Контейнер поддерживает механизм авто-очистки экземпляров,
 при закрытии области в которой они были созданы.
 
@@ -89,7 +206,7 @@ console.assert(instA1 !== instA2) // разные экземпляры
 Если этого не сделать, мы потеряем ссылку на плеер
 и музыка продолжит играть без возможности остановить ее.
 ```ts
-// MusicPlayer.ts
+// ---[ MusicPlayer.ts ]------------------------
 class MusicPlayer implements IMediaPlayer {
     // ... 
     
@@ -103,7 +220,7 @@ class MusicPlayer implements IMediaPlayer {
     }
 }
 
-// di.ts
+// ---[ di.ts ]---------------------------------
 const Types = {
     MediaPlayer: IMediaPlayer,
 }
@@ -122,7 +239,7 @@ function buildContainer() {
         .build()
 }
 
-// main.ts
+// ---[ main.ts ]-------------------------------
 function main() {
     const container = buildContainer()
     const player = container.scope('music').get(Types.MediaPlayer)
@@ -132,4 +249,39 @@ function main() {
     container.closeScope('music') // Закрываем область "music"
     // MusicPlayer.dispose() был вызыван
 }
+```
+
+## Singleton и глобальная область
+Неважно в какой области Singleton/LazySingleton был запрошен,
+он всегда работает только с глобальной областью контейнера.
+
+Поэтому, если Singleton/LazySingleton зависит от экземпляра с меньшим жизненным циклом,
+то он будет запрошен из глобальной области, а не из текущей как может показаться.
+
+В этом можно убедиться, если получить `IScopeDisposable` и проверить ключ области:
+```js
+const container = DIContainer.builder()
+    .bindFactory(
+        'scoped', 
+        r => ({ scopeKey: r.getScopeDisposable().scopeKey }), // Запрашиваем ключ текущей области
+        Lifecycle.Scoped, // Жизненный цикл ограниченный в области
+    )
+    .bindFactory(
+        'singleton',
+        r => ({ inner: r.get('scoped') }), // Получаем запрашиваем 'scoped' как зависимость
+        Lifecycle.LazySingleton, // Синглтон, не создавать сразу (lazy)
+    )
+    .build()
+
+const singletonInst = container
+        .scope('A')         // Запрашиваем 'singleton' в области 'A'
+        .get('singleton')
+const scopeKey = singletonInst.inner.scopeKey
+console.log(scopeKey) // 'scoped' экземпляр был создан в области global,
+                      // не смотря на то, что явно была указана область 'A'
+
+const scopedA = container
+        .scope('A')     // Запрашиваем экземпляр 'scoped'
+        .get('scoped')  // в области 'A' без оборачивания в 'singleton'
+console.log(scopedA.scopeKey) // теперь 'scoped' создан в области 'A'
 ```
