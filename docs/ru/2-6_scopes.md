@@ -133,7 +133,7 @@ container.scope('C').get(Types.SecureKey) // DIError: Binding of type "SecureKey
 container.get(Types.SecureKey) // DIError: Binding of type "SecureKey" not found in scope "global"
 ```
 
-### Получение объекта для закрытия области
+## Получение объекта для закрытия области
 Области может закрывать только контейнер. 
 Но при этом не хотелось бы передавать ссылку на контейнер,
 чтобы компоненты не могли произвольно получать любые экземпляры из него.
@@ -185,7 +185,7 @@ const s3 = container.scope('foo').get('service2') // Принадлежит об
 const s4 = container.scope('foo').get('service3') // Принадлежит области 'foo'
 ```
 
-### Авто-очистка экземпляров
+## Авто-очистка экземпляров
 Контейнер поддерживает механизм авто-очистки экземпляров,
 при закрытии области в которой они были созданы.
 
@@ -249,4 +249,39 @@ function main() {
     container.closeScope('music') // Закрываем область "music"
     // MusicPlayer.dispose() был вызыван
 }
+```
+
+## Singleton и глобальная область
+Неважно в какой области Singleton/LazySingleton был запрошен,
+он всегда работает только с глобальной областью контейнера.
+
+Поэтому, если Singleton/LazySingleton зависит от экземпляра с меньшим жизненным циклом,
+то он будет запрошен из глобальной области, а не из текущей как может показаться.
+
+В этом можно убедиться, если получить `IScopeDisposable` и проверить ключ области:
+```js
+const container = DIContainer.builder()
+    .bindFactory(
+        'scoped', 
+        r => ({ scopeKey: r.getScopeDisposable().scopeKey }), // Запрашиваем ключ текущей области
+        Lifecycle.Scoped, // Жизненный цикл ограниченный в области
+    )
+    .bindFactory(
+        'singleton',
+        r => ({ inner: r.get('scoped') }), // Получаем запрашиваем 'scoped' как зависимость
+        Lifecycle.LazySingleton, // Синглтон, не создавать сразу (lazy)
+    )
+    .build()
+
+const singletonInst = container
+        .scope('A')         // Запрашиваем 'singleton' в области 'A'
+        .get('singleton')
+const scopeKey = singletonInst.inner.scopeKey
+console.log(scopeKey) // 'scoped' экземпляр был создан в области global,
+                      // не смотря на то, что явно была указана область 'A'
+
+const scopedA = container
+        .scope('A')     // Запрашиваем экземпляр 'scoped'
+        .get('scoped')  // в области 'A' без оборачивания в 'singleton'
+console.log(scopedA.scopeKey) // теперь 'scoped' создан в области 'A'
 ```
