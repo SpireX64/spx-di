@@ -1,6 +1,5 @@
 import IDependencyResolver from './abstract/IDependencyResolver'
 import IEntityBinding from './abstract/IEntityBinding'
-import { DIContainerBuilder } from './DIContainer'
 
 /** Factory function of type */
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
@@ -12,23 +11,56 @@ export type TScopeKey = string | symbol
 /** Binding name type */
 export type TBindingName = string | symbol | null
 
+/** Auto-disposable interface */
+export interface IDisposable {
+    /** Called when the parent scope has been closed */
+    dispose(): void
+}
+
+export interface IScopeDisposable extends IDisposable {
+    /** The key of the scope to which this disposable belongs */
+    readonly scopeKey: TScopeKey
+
+    /** Check that the scope has been deleted */
+    isScopeDisposed(): boolean
+}
+
+export type TRequiredTypeToken<TypeMap extends object, Type extends keyof TypeMap> = {
+    type: Type,
+    name: TBindingName | null,
+    scope: TScopeKey | null
+}
+
+export type TConflictResolution =
+    | 'bind'
+    | 'override'
+    | 'throw'
+    | 'skip'
+
 /** Binding options */
 export type TBindingOptions = {
     /**
      * Name of binding.
      * Allows to inject specific instance by name.
-     * (default = null)
+     * @default null
      */
     name?: TBindingName,
 
     /**
-     * Binding override.
-     * If the type already had a binding,
-     * then a call with this flag will overwrite it,
-     * instead of adding an extra binding.
-     * (default = false)
+     * Scope(s) in which the instance is available to resolve
+     * @default null
      */
-    override?: boolean,
+    scope?: TScopeKey | TScopeKey[] | null
+
+    /**
+     * Resolve method on binding conflict.
+     * - 'bind' - Multibinding
+     * - 'override' - Override existing binding
+     * - 'throw' - Throw error
+     * - 'skip' - Leave current binding
+     * @default bind
+     */
+    conflict?: TConflictResolution,
 }
 
 /** Array list of bindings */
@@ -39,26 +71,3 @@ export type TReadonlyBindingsList<TypeMap extends object> = readonly IEntityBind
 
 /** Instance provider of specific type */
 export type TProvider<Type> = () => Type
-
-/**
- * Module definition function
- * @param TypeMap - Type map provided by the module
- * @param DependencyTypeMap - TypeMap that the module depends on
- * @param builder - Reference of container builder
- */
-export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
-    builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
-) => void
-
-
-/**
- * Utility type. Retrieves a TypeMap type from a module type
- * @see DIModuleFunction
- */
-export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
-
-/** Auto-disposable interface */
-export interface IDisposable {
-    /** Called when the parent scope has been closed */
-    dispose(): void
-}

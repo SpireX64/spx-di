@@ -1,9 +1,8 @@
 import Lifecycle from '../Lifecycle'
-import IEntityBinding, { getStringName } from '../abstract/IEntityBinding'
+import IEntityBinding from '../abstract/IEntityBinding'
 import IDependencyResolver from '../abstract/IDependencyResolver'
-import NullableBindingDIError from '../errors/NullableBindingDIError'
-import DependencyCycleDIError from '../errors/DependencyCycleDIError'
-import type { TBindingName, TReadonlyBindingsList } from '../types'
+import DIError from '../DIError'
+import type { TBindingName, TReadonlyBindingsList, TScopeKey } from '../types'
 
 export default class EntityActivator<TypeMap extends object> {
     private readonly _bindings: TReadonlyBindingsList<TypeMap>
@@ -13,8 +12,18 @@ export default class EntityActivator<TypeMap extends object> {
         this._bindings = bindings
     }
 
-    public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
-        const binding = this._bindings.find(it => it.type === type && it.name == name)
+    public findBindingOf<Type extends keyof TypeMap>(
+        type: Type,
+        name: TBindingName = null,
+        currentScope: TScopeKey | null = null,
+    ): IEntityBinding<TypeMap, Type> | null {
+        const binding = this._bindings.find(it =>
+            it.type === type &&
+            it.name == name &&
+            (it.scope == null || (Array.isArray(it.scope)
+                ? it.scope?.includes(currentScope!)
+                : it.scope === currentScope)
+            ))
         if (!binding) return null
         return binding as IEntityBinding<TypeMap, Type>
     }
@@ -44,14 +53,14 @@ export default class EntityActivator<TypeMap extends object> {
             if (hasDependencyCycle) {
                 const currentChain = this._activationChain
                 this._activationChain = []
-                throw new DependencyCycleDIError(currentChain)
+                throw DIError.dependencyCycle(currentChain)
             }
             const instance = binding.factory(resolver)
             this._activationChain.pop()
             return instance
         }
 
-        throw new NullableBindingDIError(getStringName(binding.type))
+        throw DIError.nullableBinding(binding.type, binding.name)
     }
 
     /**

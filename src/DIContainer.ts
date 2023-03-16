@@ -1,12 +1,11 @@
-import IEntityBinding, { getStringName } from './abstract/IEntityBinding'
-import MultiBindingDIError from './errors/MultiBindingDIError'
-import NullableBindingDIError from './errors/NullableBindingDIError'
+import IEntityBinding from './abstract/IEntityBinding'
 import IDependencyResolver from './abstract/IDependencyResolver'
 import EntityActivator from './internal/EntityActivator'
 import DIScope from './internal/DIScope'
+import DIError from './DIError'
 import Lifecycle from './Lifecycle'
 import type {
-    DIModuleFunction,
+    IScopeDisposable,
     TBindingName,
     TBindingOptions,
     TBindingsList,
@@ -14,6 +13,7 @@ import type {
     TProvider,
     TScopeKey,
 } from './types'
+import { TRequiredTypeToken } from './types'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
 
@@ -32,6 +32,10 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return this._globalScope.get(type, name)
     }
 
+    public getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined {
+        return this._globalScope.getOptional(type, name)
+    }
+
     public getAll<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<TypeMap[Type]> {
         return this._globalScope.getAll(type, name)
     }
@@ -44,10 +48,15 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return this._globalScope.getProvider(type, name)
     }
 
+    public getScopeDisposable(scopeKey?: TScopeKey): IScopeDisposable {
+        const scopeRef = scopeKey != null ? this.scope(scopeKey) : this._globalScope
+        return scopeRef.getScopeDisposable()
+    }
+
     public scope(key: TScopeKey): IDependencyResolver<TypeMap> {
         let scope: DIScope<TypeMap> | undefined = this._scopes.get(key)
         if (scope != null && scope) {
-            if (!scope.isClosed())
+            if (!scope.isDisposed())
                 return scope
         }
 
@@ -56,12 +65,12 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return scope
     }
 
-    public closeScope(key: TScopeKey): void {
+    public disposeScope(key: TScopeKey): void {
         if (key === DIContainer.globalScopeKey) return
         const scope = this._scopes.get(key)
         if (!scope) return
         this._scopes.delete(key)
-        scope.close()
+        scope.dispose()
     }
 
     public static builder<TypeMap extends object = {}>(){
@@ -83,8 +92,34 @@ export interface IConditionalBinder<TypeMap extends object> {
     ): DIContainerBuilder<TypeMap>
 }
 
-export class DIContainerBuilder<TypeMap extends object> {
+export interface IDIConfiguration<TypeMap extends object> {
+    /**
+     * Checks is module was added
+     * @param module - module definition
+     * @returns true, when module already added to container
+     */
+    hasModule(module: DIModuleFunction<any, any>): boolean
+
+    /**
+     * Find binding entity of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns binding entity of {@link type} or null
+     */
+    findBindingOf<Type extends keyof TypeMap>(type: Type, name?: TBindingName): IEntityBinding<TypeMap, Type> | null
+
+    /**
+     * Returns all bindings entities of given {@link type}
+     * @param type - Access key of type
+     * @param name - (opt.) Instance name
+     * @returns readonly list of bindings entities
+     */
+    getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name?: TBindingName): readonly IEntityBinding<TypeMap, Type>[]
+}
+
+export class DIContainerBuilder<TypeMap extends object> implements IDIConfiguration<TypeMap> {
     private readonly _bindings: TBindingsList<TypeMap> = []
+    private readonly _requiredTypes: TRequiredTypeToken<TypeMap, keyof TypeMap>[] = []
     private readonly _modules: DIModuleFunction<any, any>[] = []
 
     /**
@@ -92,16 +127,18 @@ export class DIContainerBuilder<TypeMap extends object> {
      * When param {@link condition} is false, skip next binding call.
      * @param condition - binding condition
      */
-    public when(condition: boolean): IConditionalBinder<TypeMap> {
-        const container = this
+    public when(condition: boolean | ((builder: IDIConfiguration<TypeMap>) => boolean)): IConditionalBinder<TypeMap> {
+        const builder: DIContainerBuilder<TypeMap> = this
+        const isAllowToBind = typeof condition === 'function' ? condition(this) : condition
         return {
             bindInstance<Type extends keyof TypeMap>(
                 type: Type,
                 instance: TypeMap[Type],
                 options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindInstance(type, instance, options)
-                return container
+                if (isAllowToBind)
+                    builder.bindInstance(type, instance, options)
+                return builder
             },
             bindFactory<Type extends keyof TypeMap>(
                 type: Type,
@@ -109,8 +146,9 @@ export class DIContainerBuilder<TypeMap extends object> {
                 lifecycle?: Lifecycle,
                 options?: TBindingOptions,
             ): DIContainerBuilder<TypeMap> {
-                if (condition) container.bindFactory(type, factory, lifecycle, options)
-                return container
+                if (isAllowToBind)
+                    builder.bindFactory(type, factory, lifecycle, options)
+                return builder
             },
         }
     }
@@ -127,15 +165,16 @@ export class DIContainerBuilder<TypeMap extends object> {
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (instance == null)
-            throw new NullableBindingDIError(getStringName(type))
+            throw DIError.nullableBinding(type, options?.name ?? null)
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
+            scope: options?.scope ?? null,
             lifecycle: Lifecycle.Singleton,
             instance,
             factory: null,
         }
-        this.bind(binding, options?.override)
+        this.bind(binding, options)
         return this
     }
 
@@ -153,15 +192,41 @@ export class DIContainerBuilder<TypeMap extends object> {
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
-            throw new NullableBindingDIError(getStringName(type))
+            throw DIError.nullableBinding(type, options?.name ?? null)
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
+            scope: options?.scope ?? null,
             lifecycle,
             factory,
             instance: null,
         }
-        this.bind(binding, options?.override)
+        this.bind(binding, options)
+        return this
+    }
+
+    /**
+     * Requiring Type Binding in Configuration.
+     * Throws error if required binding not provided
+     * @param type - Key of required type
+     * @param options - Additional options
+     */
+    public requireType<Type extends keyof TypeMap>(
+        type: Type,
+        options?: {
+            /** Specific instance name */
+            name?: TBindingName
+
+            /** Available in scope */
+            scope?: TScopeKey
+        },
+    ): DIContainerBuilder<TypeMap> {
+        const token: TRequiredTypeToken<TypeMap, Type> = {
+            type,
+            name: options?.name ?? null,
+            scope: options?.scope ?? null,
+        }
+        this._requiredTypes.push(token)
         return this
     }
 
@@ -177,33 +242,16 @@ export class DIContainerBuilder<TypeMap extends object> {
         return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
     }
 
-    /**
-     * Checks is module was added
-     * @param module - module definition
-     * @returns true, when module already added to container
-     */
     public hasModule(module: DIModuleFunction<any, any>): boolean {
         return this._modules.includes(module)
     }
 
-    /**
-     * Find binding entity of given {@link type}
-     * @param type - Access key of type
-     * @param name - (opt.) Instance name
-     * @returns binding entity of {@link type} or null
-     */
     public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
         const binding = this._bindings.find(it => it.type === type && it.name == name)
         if (binding == null) return null
         return binding as IEntityBinding<TypeMap, Type>
     }
 
-    /**
-     * Returns all bindings entities of given {@link type}
-     * @param type - Access key of type
-     * @param name - (opt.) Instance name
-     * @returns readonly list of bindings entities
-     */
     public getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): readonly IEntityBinding<TypeMap, Type>[] {
         return this._bindings.filter(it => it.type === type && it.name === name) as IEntityBinding<TypeMap, Type>[]
     }
@@ -213,32 +261,78 @@ export class DIContainerBuilder<TypeMap extends object> {
      * All singleton instances will be activated.
      */
     public build(): DIContainer<TypeMap> {
+        this.verifyRequiredTypes()
         const activator = new EntityActivator(this._bindings)
         return new DIContainer(activator)
     }
 
-    private bind<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>, override?: boolean): void {
-        if (override) {
-            const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
-            if (currentBindingIndex >= 0) {
-                this._bindings[currentBindingIndex] = binding
-                return
+    /**
+     * Check type requirements. Throws error if required binding not found.
+     * @throws RequiredBindingNotProvidedDIError
+     * @private
+     */
+    private verifyRequiredTypes(): void {
+        if (this._requiredTypes.length === 0) return
+        for (let i = 0; i < this._requiredTypes.length; ++i) {
+            const token = this._requiredTypes[i]
+            const typeBindings = this.getAllBindingsOf(token.type, token.name)
+            if (typeBindings.length === 0)
+                throw DIError.missingRequiredType(token.type, token.name, token.scope)
+            if (token.scope != null) {
+                const availableInScope = typeBindings.some(({ scope }) =>
+                    scope == null || (Array.isArray(scope) ? scope?.includes(token.scope!) : scope === token.scope)
+                )
+                if (!availableInScope)
+                    throw DIError.missingRequiredType(token.type, token.name, token.scope)
             }
         }
+    }
 
-        if (binding.lifecycle !== Lifecycle.Singleton) {
-            const wasBound = this._bindings
-                .some(it => it.type === binding.type && it.name === binding.name)
-            if (wasBound)
-                throw new MultiBindingDIError(
-                    getStringName(binding.type),
-                    getStringName(binding.name),
-                    binding.lifecycle,
-                )
+    private bind<Type extends keyof TypeMap>(
+        binding: IEntityBinding<TypeMap, Type>,
+        options?: TBindingOptions,
+    ): void {
+        const isConflict = this._bindings
+            .some(it => it.type === binding.type && it.name === binding.name)
+
+        if (isConflict) {
+            const conflictResolution = options?.conflict ?? 'bind'
+            if (conflictResolution == 'throw') {
+                throw DIError.bindingConflict(binding.type, binding.name)
+            } else if (conflictResolution == 'skip') {
+                return
+            } else if (conflictResolution === 'bind') {
+                if (binding.lifecycle !== Lifecycle.Singleton)
+                    throw DIError.invalidMultiBinding(binding.type, binding.name, binding.lifecycle)
+            } else if (conflictResolution == 'override') {
+                const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
+                if (currentBindingIndex >= 0) {
+                    this._bindings[currentBindingIndex] = binding
+                    return
+                }
+            }
         }
         this._bindings.push(binding)
     }
 }
+
+
+export type TypeMapOfContainer<TContainer> = TContainer extends DIContainer<infer TypeMap> ? TypeMap : never
+/**
+ * Module definition function
+ * @param TypeMap - Type map provided by the module
+ * @param DependencyTypeMap - TypeMap that the module depends on
+ * @param builder - Reference of container builder
+ */
+export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
+    builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
+) => void
+
+/**
+ * Utility type. Retrieves a TypeMap type from a module type
+ * @see DIModuleFunction
+ */
+export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
 
 /**
  * Module definition function
