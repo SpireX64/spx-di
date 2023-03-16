@@ -1,8 +1,7 @@
 import Lifecycle from '../Lifecycle'
-import IEntityBinding, { getStringName } from '../abstract/IEntityBinding'
+import IEntityBinding from '../abstract/IEntityBinding'
 import IDependencyResolver from '../abstract/IDependencyResolver'
-import NullableBindingDIError from '../errors/NullableBindingDIError'
-import DependencyCycleDIError from '../errors/DependencyCycleDIError'
+import DIError from '../DIError'
 import type { TBindingName, TReadonlyBindingsList, TScopeKey } from '../types'
 
 export default class EntityActivator<TypeMap extends object> {
@@ -54,14 +53,14 @@ export default class EntityActivator<TypeMap extends object> {
             if (hasDependencyCycle) {
                 const currentChain = this._activationChain
                 this._activationChain = []
-                throw new DependencyCycleDIError(currentChain)
+                throw DIError.dependencyCycle(currentChain)
             }
             const instance = binding.factory(resolver)
             this._activationChain.pop()
             return instance
         }
 
-        throw new NullableBindingDIError(getStringName(binding.type))
+        throw DIError.nullableBinding(binding.type, binding.name)
     }
 
     /**

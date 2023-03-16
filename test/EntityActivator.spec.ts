@@ -1,8 +1,8 @@
 import {
     DIContainer,
     Lifecycle,
-    DependencyCycleDIError,
-    NullableBindingDIError,
+    DIError,
+    DIErrorType,
     IDependencyResolver,
 } from '../src'
 import EntityActivator from '../src/internal/EntityActivator'
@@ -11,7 +11,7 @@ import createResolverMock from "./utils/createResolverMock";
 describe('EntityActivator', () => {
     it('Get binding of type', () => {
         // Arrange -----------
-        const expectedBinding = { type: 'value', lifecycle: Lifecycle.Singleton, instance: 10, name: null }
+        const expectedBinding = { type: 'value', lifecycle: Lifecycle.Singleton, instance: 10, name: null, factory: null, scope: null }
         const activator = new EntityActivator([expectedBinding])
 
         // Act ----------------
@@ -37,69 +37,72 @@ describe('EntityActivator', () => {
         const resolver: IDependencyResolver<{ value: string }> = {
             getLazy: jest.fn(),
             getProvider: jest.fn(),
+            getOptional: jest.fn(),
             get: jest.fn(),
             getAll: jest.fn(),
         }
         const activator = new EntityActivator([
-            { type: 'value', lifecycle: Lifecycle.Singleton, name: null}
+            { type: 'value', lifecycle: Lifecycle.Singleton, name: null, scope: null, instance: null, factory: null}
         ])
-        let error: NullableBindingDIError | null = null
+        let error: DIError | null = null
 
         // Act -----------------
         const binding = activator.findBindingOf('value')
         try {
             activator.activate(resolver, binding!)
         } catch (e) {
-            if (e instanceof NullableBindingDIError)
+            if (e instanceof DIError)
                 error = e
         }
 
         // Assert ---------------
         expect(error).not.toBeNull()
-        expect(error?.type).toBe('value')
+        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.message).toContain('value')
     })
 
     it('Short dependency cycle', () => {
         // Arrange --------------
         const activator = new EntityActivator([
-            { type: 'A', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('B') },
-            { type: 'B', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('A') }
+            { type: 'A', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('B'), instance: null, scope: null },
+            { type: 'B', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('A'), instance: null, scope: null },
         ])
         const container = new DIContainer(activator)
 
-        let error: DependencyCycleDIError | null = null
+        let error: DIError | null = null
 
         // Act ------------------
         try {
             container.get('A')
         } catch (e) {
-            if (e instanceof DependencyCycleDIError)
+            if (e instanceof DIError)
                 error = e
         }
 
         // Assert ---------------
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.DependencyCycle)
         expect(error?.message).toMatch('A -> B -> A')
     })
 
     it('Long dependency cycle', () => {
         // Arrange --------------
         const bindings = [
-            { type: 'B', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('C') },
-            { type: 'A', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('B') },
-            { type: 'C', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('D') },
-            { type: 'D', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('E') },
-            { type: 'E', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('A') },
+            { type: 'B', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('C'), instance: null, scope: null },
+            { type: 'A', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('B'), instance: null, scope: null },
+            { type: 'C', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('D'), instance: null, scope: null },
+            { type: 'D', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('E'), instance: null, scope: null },
+            { type: 'E', name: null, lifecycle: Lifecycle.Transient, factory: (r: IDependencyResolver<any>) => r.get('A'), instance: null, scope: null },
         ]
         const activator = new EntityActivator(bindings)
         const container = new DIContainer(activator)
-        let error: DependencyCycleDIError | null = null
+        let error: DIError | null = null
 
         // Act ------------------
         try {
             container.get('A')
         } catch (e) {
-            if (e instanceof DependencyCycleDIError)
+            if (e instanceof DIError)
                 error = e
         }
 
@@ -111,10 +114,10 @@ describe('EntityActivator', () => {
     it('Singletons activation', () => {
         // Arrange -----
         const bindings = [
-            { type: 'Singleton', lifecycle: Lifecycle.Singleton, factory: () => 'Singleton', name: null },
-            { type: 'Bound', lifecycle: Lifecycle.Singleton, instance: 'Bound', name: null },
-            { type: 'Transient', lifecycle: Lifecycle.Transient, factory: () => 'Transient', name: null },
-            { type: 'LazySingleton', lifecycle: Lifecycle.LazySingleton, factory: () => 'LazySingleton', name: null },
+            { type: 'Singleton', lifecycle: Lifecycle.Singleton, factory: () => 'Singleton', name: null, instance: null, scope: null },
+            { type: 'Bound', lifecycle: Lifecycle.Singleton, instance: 'Bound', name: null, factory: null, scope: null },
+            { type: 'Transient', lifecycle: Lifecycle.Transient, factory: () => 'Transient', name: null, instance: null, scope: null },
+            { type: 'LazySingleton', lifecycle: Lifecycle.LazySingleton, factory: () => 'LazySingleton', name: null, instance: null, scope: null },
         ]
         const activator = new EntityActivator(bindings)
         const resolver = createResolverMock<typeof activator extends EntityActivator<infer T> ? T : object>()

@@ -1,13 +1,10 @@
-import IEntityBinding, { getStringName } from './abstract/IEntityBinding'
-import MultiBindingDIError from './errors/MultiBindingDIError'
-import NullableBindingDIError from './errors/NullableBindingDIError'
-import BindingConflictDIError from './errors/BindingConflictDIError'
+import IEntityBinding from './abstract/IEntityBinding'
 import IDependencyResolver from './abstract/IDependencyResolver'
 import EntityActivator from './internal/EntityActivator'
 import DIScope from './internal/DIScope'
+import DIError from './DIError'
 import Lifecycle from './Lifecycle'
 import type {
-    DIModuleFunction,
     TBindingName,
     TBindingOptions,
     TBindingsList,
@@ -16,7 +13,6 @@ import type {
     TScopeKey,
 } from './types'
 import { TRequiredTypeToken } from './types'
-import { RequiredBindingNotProvidedDIError } from './errors'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
 
@@ -163,7 +159,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (instance == null)
-            throw new NullableBindingDIError(getStringName(type))
+            throw DIError.nullableBinding(type, options?.name ?? null)
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
@@ -190,7 +186,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         options?: TBindingOptions,
     ): DIContainerBuilder<TypeMap> {
         if (factory == null)
-            throw new NullableBindingDIError(getStringName(type))
+            throw DIError.nullableBinding(type, options?.name ?? null)
         const binding: IEntityBinding<TypeMap, Type> = {
             type,
             name: options?.name ?? null,
@@ -275,13 +271,13 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
             const token = this._requiredTypes[i]
             const typeBindings = this.getAllBindingsOf(token.type, token.name)
             if (typeBindings.length === 0)
-                throw new RequiredBindingNotProvidedDIError(token.type, token.name, token.scope)
+                throw DIError.missingRequiredType(token.type, token.name, token.scope)
             if (token.scope != null) {
                 const availableInScope = typeBindings.some(({ scope }) =>
                     scope == null || (Array.isArray(scope) ? scope?.includes(token.scope!) : scope === token.scope)
                 )
                 if (!availableInScope)
-                    throw new RequiredBindingNotProvidedDIError(token.type, token.name, token.scope)
+                    throw DIError.missingRequiredType(token.type, token.name, token.scope)
             }
         }
     }
@@ -296,16 +292,12 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         if (isConflict) {
             const conflictResolution = options?.conflict ?? 'bind'
             if (conflictResolution == 'throw') {
-                throw new BindingConflictDIError(binding.type, binding.name)
+                throw DIError.bindingConflict(binding.type, binding.name)
             } else if (conflictResolution == 'skip') {
                 return
             } else if (conflictResolution === 'bind') {
                 if (binding.lifecycle !== Lifecycle.Singleton)
-                    throw new MultiBindingDIError(
-                        binding.type,
-                        binding.name,
-                        binding.lifecycle,
-                    )
+                    throw DIError.invalidMultiBinding(binding.type, binding.name, binding.lifecycle)
             } else if (conflictResolution == 'override') {
                 const currentBindingIndex = this._bindings.findIndex(it => it.type === binding.type && it.name === binding.name)
                 if (currentBindingIndex >= 0) {
@@ -320,6 +312,21 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
 
 
 export type TypeMapOfContainer<TContainer> = TContainer extends DIContainer<infer TypeMap> ? TypeMap : never
+/**
+ * Module definition function
+ * @param TypeMap - Type map provided by the module
+ * @param DependencyTypeMap - TypeMap that the module depends on
+ * @param builder - Reference of container builder
+ */
+export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
+    builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
+) => void
+
+/**
+ * Utility type. Retrieves a TypeMap type from a module type
+ * @see DIModuleFunction
+ */
+export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
 
 /**
  * Module definition function

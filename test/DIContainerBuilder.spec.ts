@@ -3,10 +3,8 @@ import {
     DIContainerBuilder,
     createDIModule,
     Lifecycle,
-    NullableBindingDIError,
-    MultiBindingDIError,
-    BindingConflictDIError,
-    RequiredBindingNotProvidedDIError,
+    DIError,
+    DIErrorType,
     TypeMapOfModule,
 } from '../src'
 
@@ -174,36 +172,36 @@ describe('DIContainerBuilder', () => {
     it('Force nullable instance binding', () => {
         // Arrange -----
         const builder = DIContainer.builder<{ typeKey: string }>()
-        let error: NullableBindingDIError | null = null
+        let error: DIError | null = null
 
         // Act ---------
         try {
             builder.bindInstance('typeKey', null!)
         } catch (e) {
-            if (e instanceof NullableBindingDIError)
+            if (e instanceof DIError)
                 error = e
         }
 
         // Assert
         expect(error).not.toBeNull()
-        expect(error?.type).toBe('typeKey')
+        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
     })
 
     it('Force nullable factory binding', () => {
         // Arrange -----
         const builder = DIContainer.builder<{ typeKey: string }>()
-        let error: NullableBindingDIError | null = null
+        let error: DIError | null = null
 
         // Act ---------
         try {
             builder.bindFactory('typeKey', null!)
         } catch (e) {
-            if (e instanceof NullableBindingDIError)
+            if (e instanceof DIError)
                 error = e
         }
         // Assert ------
         expect(error).not.toBeNull()
-        expect(error?.type).toBe('typeKey')
+        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
     })
 
     it('Bind named instance', () => {
@@ -329,7 +327,7 @@ describe('DIContainerBuilder', () => {
     it('Throw error on non-singleton binding', () => {
         // Arrange ----
         const builder = DIContainer.builder<{ typeKey: number }>()
-        let error: MultiBindingDIError | null = null
+        let error: DIError | null = null
 
         // Act --------
         try {
@@ -337,12 +335,13 @@ describe('DIContainerBuilder', () => {
                 .bindFactory('typeKey', () => 1)
                 .bindFactory('typeKey', () => 2, Lifecycle.LazySingleton)
         } catch (e) {
-            if (e instanceof MultiBindingDIError)
+            if (e instanceof DIError)
                 error = e
         }
 
         // Assert -----
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.InvalidMultiBinding)
         expect(error?.message).toMatch(`${Lifecycle.LazySingleton} "typeKey"`)
     })
 
@@ -424,18 +423,19 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{ typeKey: string }>()
             .bindInstance('typeKey', firstValue)
 
-        let error: BindingConflictDIError | null = null
+        let error: DIError | null = null
 
         // Act ----------
         try {
             builder.bindInstance('typeKey', secondValue, { conflict: 'throw' })
         } catch (err) {
-            if (err instanceof BindingConflictDIError)
+            if (err instanceof DIError)
                 error = err
         }
 
         // Assert -------
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.BindingConflict)
         expect(error?.message).toContain('typeKey')
     })
 
@@ -446,19 +446,20 @@ describe('DIContainerBuilder', () => {
         }>()
             .requireType('typeKey')
 
-        let error: RequiredBindingNotProvidedDIError | null = null
+        let error: DIError | null = null
 
         // Act ----------
         try {
             builder.build()
         } catch (err) {
-            if (err instanceof RequiredBindingNotProvidedDIError) {
+            if (err instanceof DIError) {
                 error = err
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey')
     })
 
@@ -471,19 +472,20 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', 'Hello')
 
         // Act -------------
-        let error: RequiredBindingNotProvidedDIError | null = null
+        let error: DIError | null = null
 
         // Act ----------
         try {
             builder.build()
         } catch (err) {
-            if (err instanceof RequiredBindingNotProvidedDIError) {
+            if (err instanceof DIError) {
                 error = err
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey:foo')
     })
 
@@ -496,23 +498,21 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', 'Hello', { scope: 'foo' })
 
         // Act -------------
-        let error: RequiredBindingNotProvidedDIError | null = null
+        let error: DIError | null = null
 
         try {
             builder.build()
         } catch (err) {
-            if (err instanceof RequiredBindingNotProvidedDIError) {
+            if (err instanceof DIError) {
                 error = err
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey')
         expect(error?.message).toContain('"expected"')
-        expect(error?.type).toBe('typeKey')
-        expect(error?.instanceName).toBeNull()
-        expect(error?.scope).toBe('expected')
     })
 
     it('No throw if required type was provided', () => {

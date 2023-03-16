@@ -3,7 +3,8 @@ import {
     Lifecycle,
     IDisposable,
     isLazyInstance,
-    BindingNotFoundDIError,
+    DIError,
+    DIErrorType,
     TScopeKey,
 } from '../src'
 
@@ -11,19 +12,20 @@ describe('DIContainer', function () {
     it('Try get not bound value', () => {
         // Arrange -----
         const container = DIContainer.builder<{ value: number }>().build()
-        let error: BindingNotFoundDIError | null = null
+        let error: DIError | null = null
 
         // Act ---------
         try {
             container.get('value')
         } catch (err) {
-            if (err instanceof BindingNotFoundDIError)
+            if (err instanceof DIError)
                 error = err
         }
 
         // Assert ------
         expect(error).not.toBeNull()
-        expect(error?.type).toBe('value')
+        expect(error?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(error?.message).toContain('value')
     })
 
     it('Get optional value without binding', () => {
@@ -294,13 +296,13 @@ describe('DIContainer', function () {
             )
             .build()
 
-        let errorAtGlobalScope: BindingNotFoundDIError | null = null
+        let errorAtGlobalScope: DIError | null = null
 
         // Act ---------
         try {
             container.get('typeKey')
         } catch (err) {
-            if (err instanceof BindingNotFoundDIError)
+            if (err instanceof DIError)
                 errorAtGlobalScope = err
         }
 
@@ -310,6 +312,7 @@ describe('DIContainer', function () {
 
         // Assert ------
         expect(errorAtGlobalScope).not.toBeNull()
+        expect(errorAtGlobalScope?.errorType).toBe(DIErrorType.BindingNotFound)
         expect(instanceAtAllowedScope).not.toBeNull()
     })
 

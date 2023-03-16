@@ -1,6 +1,5 @@
 import IDependencyResolver from './abstract/IDependencyResolver'
 import IEntityBinding from './abstract/IEntityBinding'
-import { DIContainerBuilder } from './DIContainer'
 
 /** Factory function of type */
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
@@ -58,22 +57,6 @@ export type TReadonlyBindingsList<TypeMap extends object> = readonly IEntityBind
 
 /** Instance provider of specific type */
 export type TProvider<Type> = () => Type
-
-/**
- * Module definition function
- * @param TypeMap - Type map provided by the module
- * @param DependencyTypeMap - TypeMap that the module depends on
- * @param builder - Reference of container builder
- */
-export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
-    builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
-) => void
-
-/**
- * Utility type. Retrieves a TypeMap type from a module type
- * @see DIModuleFunction
- */
-export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
 
 /** Auto-disposable interface */
 export interface IDisposable {

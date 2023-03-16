@@ -2,10 +2,9 @@ import Lifecycle from '../Lifecycle'
 import { TBindingName, TProvider, TScopeKey } from '../types'
 import IDependencyResolver from '../abstract/IDependencyResolver'
 import EntityActivator from './EntityActivator'
-import BindingNotFoundDIError from '../errors/BindingNotFoundDIError'
-import ClosedScopeDIError from '../errors/ClosedScopeDIError'
-import IEntityBinding, { getStringName } from '../abstract/IEntityBinding'
+import IEntityBinding from '../abstract/IEntityBinding'
 import { createLazyInstance } from './LazyInstance'
+import DIError from '../DIError'
 
 export default class DIScope<TypeMap extends object> implements IDependencyResolver<TypeMap> {
     private readonly _activator: EntityActivator<TypeMap>
@@ -65,18 +64,18 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
 
     public get<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         if (this._isClosed)
-            throw new ClosedScopeDIError(this.key)
+            throw DIError.illegalClosedScopeAccess(this.key)
 
         const binding = this._activator.findBindingOf(type, name, this.key)
         if (binding == null)
-            throw new BindingNotFoundDIError(getStringName(type))
+            throw DIError.bindingNotFound(type, name)
 
         return this.resolveInstanceByBinding(binding)
     }
 
     public getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined {
         if (this._isClosed)
-            throw new ClosedScopeDIError(this.key)
+            throw DIError.illegalClosedScopeAccess(this.key)
 
         const binding = this._activator.findBindingOf(type, name, this.key)
         if (binding == null)
@@ -101,7 +100,7 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
 
     public getAll<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<TypeMap[Type]> {
         if (this._isClosed)
-            throw new ClosedScopeDIError(this.key)
+            throw DIError.illegalClosedScopeAccess(this.key)
 
         if (this._parent != null)
             return this._parent.getAll(type, name)
@@ -118,11 +117,13 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
     }
 
     public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {
-        const scope = this
+        if (this._isClosed)
+            throw DIError.illegalClosedScopeAccess(this.key)
 
+        const scope = this
         function provider() {
             if (scope.isClosed())
-                throw new ClosedScopeDIError(scope.key)
+                throw DIError.illegalClosedScopeAccess(scope.key)
             return scope.get(type, name)
         }
 
@@ -132,9 +133,12 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
     }
 
     public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+        if (this._isClosed)
+            throw DIError.illegalClosedScopeAccess(this.key)
+
         const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
-            throw new BindingNotFoundDIError(getStringName(type))
+            throw DIError.bindingNotFound(type, name)
 
         const instance = this.getActivatedInstance(
             binding,
