@@ -71,6 +71,21 @@ export default class DIScope<TypeMap extends object> implements IDependencyResol
         if (binding == null)
             throw new BindingNotFoundDIError(getStringName(type))
 
+        return this.resolveInstanceByBinding(binding)
+    }
+
+    public getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined {
+        if (this._isClosed)
+            throw new ClosedScopeDIError(this.key)
+
+        const binding = this._activator.findBindingOf(type, name, this.key)
+        if (binding == null)
+            return undefined
+
+        return this.resolveInstanceByBinding(binding)
+    }
+
+    private resolveInstanceByBinding<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>): TypeMap[Type] {
         const isSingleton = binding.lifecycle === Lifecycle.Singleton
             || binding.lifecycle === Lifecycle.LazySingleton
         let instance = this.getActivatedInstance(binding, isSingleton)

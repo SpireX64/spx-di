@@ -35,6 +35,10 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return this._globalScope.get(type, name)
     }
 
+    public getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined {
+        return this._globalScope.getOptional(type, name)
+    }
+
     public getAll<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<TypeMap[Type]> {
         return this._globalScope.getAll(type, name)
     }

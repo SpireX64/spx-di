@@ -6,8 +6,17 @@ export default interface IDependencyResolver<TypeMap extends object> {
      * @param type - the type of required instance
      * @param name - (opt.) instance name, to request instance type by name
      * @returns instance of requested type
+     * @throws BindingNotFoundDIError if instance cannot be resolved
      */
     get<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type]
+
+    /**
+     * Try to request an instance of the given {@link type}.
+     * @param type - the type of required instance
+     * @param name - (opt.) instance name, to request instance type by name
+     * @returns instance of requested type or undefined
+     */
+    getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined
 
     /**
      * Request all bound instances of given {@link type}.

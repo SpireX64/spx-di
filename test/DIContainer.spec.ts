@@ -26,6 +26,31 @@ describe('DIContainer', function () {
         expect(error?.type).toBe('value')
     })
 
+    it('Get optional value without binding', () => {
+        // Arrange -----
+        const container = DIContainer.builder<{value: string}>().build()
+
+        // Act ---------
+        const value = container.getOptional('value')
+
+        // Assert ------
+        expect(value).toBeUndefined()
+    })
+
+    it('Get optional value with binding', () => {
+        // Arrange ------
+        const expectedValue = 'hello'
+        const container = DIContainer.builder<{ value: string }>()
+            .bindInstance('value', expectedValue)
+            .build()
+
+        // Act ----------
+        const value = container.getOptional('value')
+
+        // Assert -------
+        expect(value).toBe(expectedValue)
+    })
+
     it('Get value by instance binding', () => {
         // Arrange -----
         const expectedValue = 42

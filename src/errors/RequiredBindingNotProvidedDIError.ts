@@ -18,6 +18,6 @@ export default class RequiredBindingNotProvidedDIError extends DIError {
 
         this.type = type
         this.instanceName = name
-        this.scope = null
+        this.scope = scope
     }
 }
