@@ -77,29 +77,25 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return new DIContainerBuilder<TypeMap>()
     }
 }
-export interface IConditionalBinder<TypeMap extends object> {
+export interface IConditionalBinder<
+    TypeMap extends object,
+    TBuilder extends IDIModuleBuilder<TypeMap>
+> {
     bindInstance<Type extends keyof TypeMap>(
         type: Type,
         instance: TypeMap[Type],
         options?: TBindingOptions,
-    ): DIContainerBuilder<TypeMap>
+    ): TBuilder
 
     bindFactory<Type extends keyof TypeMap>(
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
         lifecycle?: Lifecycle,
         options?: TBindingOptions,
-    ): DIContainerBuilder<TypeMap>
+    ): TBuilder
 }
 
 export interface IDIConfiguration<TypeMap extends object> {
-    /**
-     * Checks is module was added
-     * @param module - module definition
-     * @returns true, when module already added to container
-     */
-    hasModule(module: DIModuleFunction<any, any>): boolean
-
     /**
      * Find binding entity of given {@link type}
      * @param type - Access key of type
@@ -117,17 +113,63 @@ export interface IDIConfiguration<TypeMap extends object> {
     getAllBindingsOf<Type extends keyof TypeMap>(type: Type, name?: TBindingName): readonly IEntityBinding<TypeMap, Type>[]
 }
 
-export class DIContainerBuilder<TypeMap extends object> implements IDIConfiguration<TypeMap> {
-    private readonly _bindings: TBindingsList<TypeMap> = []
-    private readonly _requiredTypes: TRequiredTypeToken<TypeMap, keyof TypeMap>[] = []
-    private readonly _modules: DIModuleFunction<any, any>[] = []
-
+interface IDIModuleBuilder<TypeMap extends object> extends IDIConfiguration<TypeMap>{
     /**
      * Conditional binding.
      * When param {@link condition} is false, skip next binding call.
      * @param condition - binding condition
      */
-    public when(condition: boolean | ((builder: IDIConfiguration<TypeMap>) => boolean)): IConditionalBinder<TypeMap> {
+    when(condition: boolean | ((builder: IDIConfiguration<TypeMap>) => boolean)): IConditionalBinder<TypeMap, IDIModuleBuilder<TypeMap>>
+
+    /**
+     * Bind type with instance/value
+     * @param type Access key of the type
+     * @param instance instance of type to bind
+     * @param options - (opt.) Extra binding options
+     */
+    bindInstance<Type extends keyof TypeMap>(
+        type: Type,
+        instance: TypeMap[Type],
+        options?: TBindingOptions,
+    ): IDIModuleBuilder<TypeMap>
+
+    /**
+     * Bind type with factory function
+     * @param type - Access key of the type
+     * @param factory - Factory function
+     * @param lifecycle - (opt.) Activated instance lifecycle (default = Singleton)
+     * @param options - (opt.) Extra binding options
+     */
+    bindFactory<Type extends keyof TypeMap>(
+        type: Type,
+        factory: TInstanceFactory<TypeMap, Type>,
+        lifecycle?: Lifecycle,
+        options?: TBindingOptions,
+    ): IDIModuleBuilder<TypeMap>
+
+    /**
+     * Requiring Type Binding in Configuration.
+     * Throws error if required binding not provided
+     * @param type - Key of required type
+     * @param options - Additional options
+     */
+    requireType<Type extends keyof TypeMap>(
+        type: Type,
+        options?: {
+            /** Specific instance name */
+            name?: TBindingName
+
+            /** Available in scope */
+            scope?: TScopeKey
+        },
+    ): IDIModuleBuilder<TypeMap>
+}
+
+export class DIContainerBuilder<TypeMap extends object> implements IDIModuleBuilder<TypeMap> {
+    private readonly _bindings: TBindingsList<TypeMap> = []
+    private readonly _requiredTypes: TRequiredTypeToken<TypeMap, keyof TypeMap>[] = []
+
+    public when(condition: boolean | ((builder: IDIConfiguration<TypeMap>) => boolean)): IConditionalBinder<TypeMap, DIContainerBuilder<TypeMap>> {
         const builder: DIContainerBuilder<TypeMap> = this
         const isAllowToBind = typeof condition === 'function' ? condition(this) : condition
         return {
@@ -153,12 +195,6 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         }
     }
 
-    /**
-     * Bind type with instance/value
-     * @param type Access key of the type
-     * @param instance instance of type to bind
-     * @param options - (opt.) Extra binding options
-     */
     public bindInstance<Type extends keyof TypeMap>(
         type: Type,
         instance: TypeMap[Type],
@@ -178,13 +214,6 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         return this
     }
 
-    /**
-     * Bind type with factory function
-     * @param type - Access key of the type
-     * @param factory - Factory function
-     * @param lifecycle - (opt.) Activated instance lifecycle (default = Singleton)
-     * @param options - (opt.) Extra binding options
-     */
     public bindFactory<Type extends keyof TypeMap>(
         type: Type,
         factory: TInstanceFactory<TypeMap, Type>,
@@ -205,12 +234,6 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
         return this
     }
 
-    /**
-     * Requiring Type Binding in Configuration.
-     * Throws error if required binding not provided
-     * @param type - Key of required type
-     * @param options - Additional options
-     */
     public requireType<Type extends keyof TypeMap>(
         type: Type,
         options?: {
@@ -236,14 +259,10 @@ export class DIContainerBuilder<TypeMap extends object> implements IDIConfigurat
      * @returns Container builder expanded by {@link module} type map
      */
     public useModule<ModuleTypeMap extends object>(module: DIModuleFunction<ModuleTypeMap, any>): DIContainerBuilder<TypeMap & ModuleTypeMap> {
-        module(this)
-        this._modules.push(module)
+        // @ts-ignore
+        module(this as DIContainerBuilder<TypeMap & ModuleTypeMap>)
         // @ts-ignore
         return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
-    }
-
-    public hasModule(module: DIModuleFunction<any, any>): boolean {
-        return this._modules.includes(module)
     }
 
     public findBindingOf<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): IEntityBinding<TypeMap, Type> | null {
@@ -322,10 +341,10 @@ export type TypeMapOfContainer<TContainer> = TContainer extends DIContainer<infe
  * Module definition function
  * @param TypeMap - Type map provided by the module
  * @param DependencyTypeMap - TypeMap that the module depends on
- * @param builder - Reference of container builder
+ * @param builder - Reference of builder
  */
 export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
-    builder: DIContainerBuilder<TypeMap & DependencyTypeMap>,
+    builder: IDIModuleBuilder<TypeMap & DependencyTypeMap>,
 ) => void
 
 /**

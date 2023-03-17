@@ -348,13 +348,11 @@ describe('DIContainerBuilder', () => {
     it('Separate DI configuration to modules', () => {
         // Arrange -----
         const moduleA = createDIModule<{ valueA: number }>(builder => {
-            builder
-                .bindInstance('valueA', 42)
+            builder.bindInstance('valueA', 42)
         })
 
         const moduleB = createDIModule<{ valueB: number }, TypeMapOfModule<typeof moduleA>>(builder => {
-            builder
-                .bindInstance('valueB', 256)
+            builder.bindInstance('valueB', 256)
         })
 
         // Act ---------
@@ -362,15 +360,10 @@ describe('DIContainerBuilder', () => {
             .useModule(moduleA)
             .useModule(moduleB)
 
-        const hasModuleA = builder.hasModule(moduleA)
-        const hasModuleB = builder.hasModule(moduleB)
-
         const bindingValueA = builder.findBindingOf('valueA')
         const bindingValueB = builder.findBindingOf('valueB')
 
         // Assert ------
-        expect(hasModuleA).toBeTruthy()
-        expect(hasModuleB).toBeTruthy()
         expect(bindingValueA).not.toBeNull()
         expect(bindingValueA?.instance).toBe(42)
         expect(bindingValueB).not.toBeNull()
