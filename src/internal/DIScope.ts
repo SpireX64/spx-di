@@ -76,7 +76,7 @@ export default class DIScope<TypeMap extends object>
 
         const binding = this._activator.findBindingOf(type, name, this.key)
         if (binding == null)
-            throw DIError.bindingNotFound(type, name)
+            throw DIError.bindingNotFound(type, name, this.key)
 
         return this.resolveInstanceByBinding(binding)
     }
@@ -146,7 +146,7 @@ export default class DIScope<TypeMap extends object>
 
         const binding = this._activator.findBindingOf(type, name)
         if (binding == null)
-            throw DIError.bindingNotFound(type, name)
+            throw DIError.bindingNotFound(type, name, this.key)
 
         const instance = this.getActivatedInstance(
             binding,

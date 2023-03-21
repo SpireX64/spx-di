@@ -9,7 +9,8 @@ export enum DIErrorType {
     DependencyCycle,
     InvalidMultiBinding,
     NullableBinding,
-    MissingRequiredType
+    MissingRequiredType,
+    IllegalState,
 }
 
 function getTypeName(type: string | symbol | number, bindingName: TBindingName): string {
@@ -19,6 +20,10 @@ function getTypeName(type: string | symbol | number, bindingName: TBindingName):
 }
 
 export default class DIError {
+    public static illegalState(message: string, innerError?: DIError | Error) {
+        return new DIError(DIErrorType.IllegalState, message, innerError)
+    }
+
     public static bindingConflict(type: string | symbol | number, bindingName: TBindingName): DIError {
         return new DIError(
             DIErrorType.BindingConflict,
