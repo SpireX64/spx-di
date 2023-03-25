@@ -1,5 +1,5 @@
 import { TBindingName, TScopeKey } from './types'
-import IEntityBinding, {getStringName} from './abstract/IEntityBinding'
+import ITypeBinding, { getStringName } from './abstract/ITypeBinding'
 import Lifecycle from './Lifecycle'
 
 export enum DIErrorType {
@@ -45,7 +45,7 @@ export default class DIError {
         )
     }
 
-    public static dependencyCycle(activationChain: readonly IEntityBinding<any, any>[]): DIError {
+    public static dependencyCycle(activationChain: readonly ITypeBinding<any, any>[]): DIError {
         const graph = activationChain.map(it => {
             let typeName = getStringName(it.type)
             if (it.name != null)
