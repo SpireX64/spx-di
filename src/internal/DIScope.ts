@@ -56,7 +56,7 @@ export default class DIScope<TypeMap extends object>
 
         let instance: TypeMap[Type] | undefined
         if (allowInheritedGet) {
-            instance = this._parent?.get(binding.type, binding.name)
+            instance = this._parent?.resolveInstanceByBinding(binding)
             if (instance != null)
                 return instance as TypeMap[Type]
         }

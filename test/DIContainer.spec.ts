@@ -548,4 +548,22 @@ describe('DIContainer', function () {
         expect(obj.scopeDisposable.isScopeDisposed()).toBeTruthy()
         expect(disposeFunction.mock.calls.length).toBe(1)
     })
+
+    it('Get scoped singleton value in scope', () => {
+        // Arrange ----
+        const expectedValue = 'Hello'
+        const container = DIContainer.builder<{ typeKey: { name: string } }>()
+            .bindFactory('typeKey', () => ({name: expectedValue}), Lifecycle.Singleton, { scope: 'foo' })
+            .build()
+
+        // Act --------
+        const value = container.scope('foo').get('typeKey')
+        container.disposeScope('foo')
+        const value2 = container.scope('foo').get('typeKey')
+
+        // Assert -----
+        expect(value.name).toBe(expectedValue)
+        expect(value2.name).toBe(expectedValue)
+        expect(value2).toBe(value)
+    })
 })
