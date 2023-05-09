@@ -4,27 +4,43 @@ import {
     DIErrorType,
     Lifecycle,
     IDependencyResolver,
-    IScopeDisposable,
 } from '../src'
 import InstanceActivator from '../src/internal/InstanceActivator'
 import BindingsRegistrar from '../src/internal/BindingsRegistrar'
 import createResolverMock from './utils/createResolverMock'
 import createBinding from './utils/createBinding'
 
+function createDependencyResolverMock<TypeMap extends object>(override?: Partial<IDependencyResolver<TypeMap>>) {
+    const get = jest.fn(override?.get)
+    const getLazy = jest.fn(override?.getLazy)
+    const getScopeDisposable = jest.fn(override?.getScopeDisposable)
+    const getOptional = jest.fn(override?.getOptional)
+    const getProvider = jest.fn(override?.getProvider)
+    const getAll = jest.fn(override?.getAll)
+
+    return {
+        getLazy,
+        get,
+        getScopeDisposable,
+        mockObject: <IDependencyResolver<TypeMap>>{
+            get,
+            getLazy,
+            getScopeDisposable,
+            getOptional,
+            getProvider,
+            getAll,
+        }
+    }
+}
+
 describe('InstanceActivator', () => {
 
     it('Try activate empty binding', () => {
+        type TypeMap = { value: string }
         // Arrange -------------
-        const resolver: IDependencyResolver<{ value: string }> = {
-            getLazy: jest.fn(),
-            getProvider: jest.fn(),
-            getOptional: jest.fn(),
-            get: jest.fn(),
-            getAll: jest.fn(),
-            getScopeDisposable(): IScopeDisposable { return null! },
-        }
+        const resolver = createDependencyResolverMock<TypeMap>()
 
-        const registrar = new BindingsRegistrar<{ value: string }>()
+        const registrar = new BindingsRegistrar<TypeMap>()
         registrar.register(createBinding('value'), 'bind')
 
         const activator = new InstanceActivator(registrar)
@@ -33,7 +49,7 @@ describe('InstanceActivator', () => {
         // Act -----------------
         const binding = activator.find('value')
         try {
-            activator.activate(resolver, binding!)
+            activator.activate(resolver.mockObject, binding!)
         } catch (e) {
             if (e instanceof DIError)
                 error = e
@@ -43,6 +59,23 @@ describe('InstanceActivator', () => {
         expect(error).not.toBeNull()
         expect(error?.errorType).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain('value')
+    })
+
+    it('Activate binding by inner instance ref', () => {
+        type TypeMap = { value: string }
+        const expectedInstance = 'test'
+        const binding = createBinding<TypeMap, 'value'>('value', { instance: expectedInstance })
+
+        // Arrange ---------
+        const resolver = createDependencyResolverMock<TypeMap>()
+        const registrar = new BindingsRegistrar<TypeMap>()
+        const activator = new InstanceActivator<TypeMap>(registrar)
+
+        // Act -------------
+        const instance = activator.activate(resolver.mockObject, binding)
+
+        // Assert ----------
+        expect(instance).toBe(expectedInstance)
     })
 
     it('Short dependency cycle', () => {
