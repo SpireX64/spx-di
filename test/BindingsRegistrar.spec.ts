@@ -111,6 +111,31 @@ describe('BindingsRegistrar', () => {
         expect(error?.errorType).toBe(DIErrorType.BindingConflict)
     })
 
+    it('Multi register type in same scope', () => {
+        // Arrange -------
+        const registrar = new BindingsRegistrar<SampleTypeMap>()
+        const binding1 = createBinding<SampleTypeMap, 'someNumber'>('someNumber', { instance: 1, scope: 'test' })
+        const binding2 = createBinding<SampleTypeMap, 'someNumber'>('someNumber', { instance: 1, scope: 'test' })
+
+        // Act -----------
+        registrar.register(binding1, 'throw')
+        let error: DIError | null = null
+        try {
+            registrar.register(binding2, 'throw')
+        } catch (err) {
+            if (err instanceof DIError)
+                error = err
+        }
+
+        const bindingsOfType = registrar.findAllOf('someNumber')
+
+        // Assert --------
+        expect(bindingsOfType.length).toBe(1)
+        expect(bindingsOfType).toContain(binding1)
+        expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.BindingConflict)
+    })
+
     it('Find binding by predicate', () => {
         // Arrange ----
         const binding1 = createBinding<SampleTypeMap, 'someNumber'>('someNumber', { name: 'foo', scope: 'bar', lifecycle: Lifecycle.Singleton })
