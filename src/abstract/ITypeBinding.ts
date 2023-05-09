@@ -5,7 +5,7 @@ import type { TBindingName, TInstanceFactory, TScopeKey } from '../types'
  * Entity of type binding.
  * Provides information about how-to activate instance of type.
  */
-export default interface IEntityBinding<TypeMap extends object, Type extends keyof TypeMap> {
+export default interface ITypeBinding<TypeMap extends object, Type extends keyof TypeMap> {
     /** Type key */
     readonly type: Type
 
@@ -22,7 +22,14 @@ export default interface IEntityBinding<TypeMap extends object, Type extends key
     readonly factory: TInstanceFactory<TypeMap, Type> | null
 
     /** Scope(s) in which the instance is available to resolve */
-    readonly scope: TScopeKey | TScopeKey[] | null
+    readonly scope: TScopeKey | readonly TScopeKey[] | null
+}
+
+export function checkIsAvailableInScope(bindingScope: TScopeKey | readonly TScopeKey[] | null, scope: TScopeKey): boolean {
+    if (bindingScope == null) return true
+    return Array.isArray(bindingScope)
+        ? bindingScope.includes(scope)
+        : bindingScope == scope;
 }
 
 /**

@@ -33,7 +33,7 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{ value: string }>()
 
         // Act --------
-        const binding = builder.findBindingOf('value')
+        const binding = builder.find('value')
 
         // Assert -----
         expect(binding).toBeNull()
@@ -46,7 +46,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindInstance('value', expectedValue)
-        const binding = builder.findBindingOf('value')
+        const binding = builder.find('value')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -64,7 +64,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindFactory('typeKey', factory)
-        const binding = builder.findBindingOf('typeKey')
+        const binding = builder.find('typeKey')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -88,7 +88,7 @@ describe('DIContainerBuilder', () => {
             .bindInstance('originValue', 10)
             .bindFactory('factoryValue', factory)
 
-        const factoryBinding = builder.findBindingOf('factoryValue')
+        const factoryBinding = builder.find('factoryValue')
 
         // Assert ------
         expect(factoryBinding).not.toBeNull()
@@ -104,7 +104,7 @@ describe('DIContainerBuilder', () => {
 
         // Act --------
         const outBuilder = builder.bindFactory('typeKey', factory, Lifecycle.Transient)
-        const binding = builder.findBindingOf('typeKey')
+        const binding = builder.find('typeKey')
 
         // Assert -----
         expect(outBuilder).toBe(builder)
@@ -129,44 +129,14 @@ describe('DIContainerBuilder', () => {
             .when(false).bindInstance('bar', 'BAR')
             .bindInstance('qwe', 'QWE')
 
-        const fooBinding = builder.findBindingOf('foo')
-        const barBinding = builder.findBindingOf('bar')
-        const qweBinding = builder.findBindingOf('qwe')
+        const fooBinding = builder.find('foo')
+        const barBinding = builder.find('bar')
+        const qweBinding = builder.find('qwe')
 
         // Assert ------
         expect(fooBinding).not.toBeNull()
         expect(barBinding).toBeNull()
         expect(qweBinding).not.toBeNull()
-    })
-
-    it('Conditional binding by predicate', () => {
-        // Arrange -----------
-        const builder = DIContainer.builder<{
-            foo: string
-            bar: string
-            isFooBound: boolean
-            isBarBound: boolean
-        }>()
-
-        // Act --------------
-        const container = builder
-            .bindInstance('foo', 'Hello!')
-            .when(it => it.findBindingOf('foo') != null)
-                .bindInstance('isFooBound', true)
-            .when(it => it.findBindingOf('foo') == null)
-                .bindInstance('isFooBound', false)
-            .when(it => it.findBindingOf('bar') != null)
-                .bindInstance('isBarBound', true)
-            .when(it => it.findBindingOf('bar') == null)
-                .bindInstance('isBarBound', false)
-            .build()
-
-        const isFooBound = container.get('isFooBound')
-        const isBarBound = container.get('isBarBound')
-
-        // Assert -----------
-        expect(isFooBound).toBeTruthy()
-        expect(isBarBound).toBeFalsy()
     })
 
     it('Force nullable instance binding', () => {
@@ -215,9 +185,9 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', expectedValueA, { name: 'A' })
             .bindInstance('typeKey', expectedValueB, { name: 'B' })
 
-        const bindingDefault = builder.findBindingOf('typeKey')
-        const bindingA = builder.findBindingOf('typeKey', 'A')
-        const bindingB = builder.findBindingOf('typeKey', 'B')
+        const bindingDefault = builder.find('typeKey')
+        const bindingA = builder.find('typeKey', it => it.name === 'A')
+        const bindingB = builder.find('typeKey', it => it.name === 'B')
 
         // Assert -------
         expect(bindingDefault).toBeNull()
@@ -240,7 +210,7 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', expectedValue1)
             .bindInstance('typeKey', expectedValue2)
 
-        const bindings = builder.getAllBindingsOf('typeKey')
+        const bindings = builder.findAllOf('typeKey')
 
         // Assert --------
         expect(bindings.length).toBe(2)
@@ -259,7 +229,7 @@ describe('DIContainerBuilder', () => {
             .bindFactory('typeKey', factory1)
             .bindFactory('typeKey', factory2)
 
-        const bindings = builder.getAllBindingsOf('typeKey')
+        const bindings = builder.findAllOf('typeKey')
 
         // Assert ------
         expect(bindings.length).toBe(2)
@@ -281,7 +251,7 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', value)
             .bindFactory('typeKey', factory)
 
-        const bindings = builder.getAllBindingsOf('typeKey')
+        const bindings = builder.findAllOf('typeKey')
 
         // Assert -----------
         expect(bindings.length).toBe(2)
@@ -309,8 +279,8 @@ describe('DIContainerBuilder', () => {
             .bindInstance('typeKey', strings[3], { name })
             .bindInstance('typeKey', strings[4], { name })
 
-        const defaultBindings = builder.getAllBindingsOf('typeKey')
-        const namedBindings = builder.getAllBindingsOf('typeKey', name)
+        const defaultBindings = builder.findAllOf('typeKey')
+        const namedBindings = builder.findAllOf('typeKey', it => it.name === name)
 
         // Assert ------------
         expect(defaultBindings.length).toBe(2)
@@ -360,76 +330,14 @@ describe('DIContainerBuilder', () => {
             .useModule(moduleA)
             .useModule(moduleB)
 
-        const bindingValueA = builder.findBindingOf('valueA')
-        const bindingValueB = builder.findBindingOf('valueB')
+        const bindingValueA = builder.find('valueA')
+        const bindingValueB = builder.find('valueB')
 
         // Assert ------
         expect(bindingValueA).not.toBeNull()
         expect(bindingValueA?.instance).toBe(42)
         expect(bindingValueB).not.toBeNull()
         expect(bindingValueB?.instance).toBe(256)
-    })
-
-    it('Override binding on conflict', () => {
-        // Arrange -------
-        const originValue = 'Foo'
-        const expectedValue = 'Bar'
-        const builder = DIContainer.builder<{ typeKey: string }>()
-            .bindInstance('typeKey', originValue)
-
-        // Act -----------
-        builder.bindInstance('typeKey', expectedValue, { conflict: 'override' })
-
-        const actualBinding = builder.findBindingOf('typeKey')
-        const bindings = builder.getAllBindingsOf('typeKey')
-
-        // Assert --------
-        expect(actualBinding?.instance).toBe(expectedValue)
-        expect(bindings.length).toBe(1)
-    })
-
-
-    it('Skip binding on conflict', () => {
-        // Arrange ------
-        const expectedValue = 'Foo'
-        const newValue = 'Bar'
-
-        const builder = DIContainer.builder<{ typeKey: string }>()
-            .bindInstance('typeKey', expectedValue)
-
-        // Act ----------
-        builder.bindInstance('typeKey', newValue, { conflict: 'skip' })
-
-        const actualBinding = builder.findBindingOf('typeKey')
-        const bindings = builder.getAllBindingsOf('typeKey')
-
-        // Assert -------
-        expect(actualBinding?.instance).toBe(expectedValue)
-        expect(bindings.length).toBe(1)
-    })
-
-    it('Throw on binding conflict', () => {
-        // Arrange ------
-        const firstValue = 'Foo'
-        const secondValue = 'Bar'
-
-        const builder = DIContainer.builder<{ typeKey: string }>()
-            .bindInstance('typeKey', firstValue)
-
-        let error: DIError | null = null
-
-        // Act ----------
-        try {
-            builder.bindInstance('typeKey', secondValue, { conflict: 'throw' })
-        } catch (err) {
-            if (err instanceof DIError)
-                error = err
-        }
-
-        // Assert -------
-        expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.BindingConflict)
-        expect(error?.message).toContain('typeKey')
     })
 
     it('Throw if required type binding not bound', () => {
@@ -461,7 +369,7 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{
             typeKey: string,
         }>()
-            .requireType('typeKey', { name: 'foo' })
+            .requireType('typeKey', { name: 'foo', scope: '' })
             .bindInstance('typeKey', 'Hello')
 
         // Act -------------

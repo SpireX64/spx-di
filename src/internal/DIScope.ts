@@ -7,15 +7,15 @@ import {
     TScopeKey,
 } from '../types'
 import IDependencyResolver from '../abstract/IDependencyResolver'
-import EntityActivator from './EntityActivator'
-import IEntityBinding from '../abstract/IEntityBinding'
+import InstanceActivator from './InstanceActivator'
+import ITypeBinding, { checkIsAvailableInScope } from '../abstract/ITypeBinding'
 import { createLazyInstance } from './LazyInstance'
 import DIError from '../DIError'
 
 export default class DIScope<TypeMap extends object>
     implements IDependencyResolver<TypeMap>, IDisposable {
 
-    private readonly _activator: EntityActivator<TypeMap>
+    private readonly _activator: InstanceActivator<TypeMap>
     private readonly _parent: DIScope<TypeMap> | null
     private readonly _scopedInstancesMap = new Map<
         keyof TypeMap,
@@ -25,7 +25,7 @@ export default class DIScope<TypeMap extends object>
 
     public constructor(
         public readonly key: TScopeKey,
-        activator: EntityActivator<TypeMap>,
+        activator: InstanceActivator<TypeMap>,
         parentScope: DIScope<TypeMap> | null = null,
     ) {
         this._activator = activator
@@ -48,7 +48,7 @@ export default class DIScope<TypeMap extends object>
      * @private
      */
     private getActivatedInstance<Type extends keyof TypeMap>(
-        binding: IEntityBinding<TypeMap, Type>,
+        binding: ITypeBinding<TypeMap, Type>,
         allowInheritedGet: boolean,
     ): TypeMap[Type] | null {
         if (binding.instance != null)
@@ -56,7 +56,7 @@ export default class DIScope<TypeMap extends object>
 
         let instance: TypeMap[Type] | undefined
         if (allowInheritedGet) {
-            instance = this._parent?.get(binding.type, binding.name)
+            instance = this._parent?.resolveInstanceByBinding(binding)
             if (instance != null)
                 return instance as TypeMap[Type]
         }
@@ -74,7 +74,7 @@ export default class DIScope<TypeMap extends object>
         if (this._isDisposed)
             throw DIError.illegalClosedScopeAccess(this.key)
 
-        const binding = this._activator.findBindingOf(type, name, this.key)
+        const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)
             throw DIError.bindingNotFound(type, name, this.key)
 
@@ -85,14 +85,14 @@ export default class DIScope<TypeMap extends object>
         if (this._isDisposed)
             throw DIError.illegalClosedScopeAccess(this.key)
 
-        const binding = this._activator.findBindingOf(type, name, this.key)
+        const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)
             return undefined
 
         return this.resolveInstanceByBinding(binding)
     }
 
-    private resolveInstanceByBinding<Type extends keyof TypeMap>(binding: IEntityBinding<TypeMap, Type>): TypeMap[Type] {
+    private resolveInstanceByBinding<Type extends keyof TypeMap>(binding: ITypeBinding<TypeMap, Type>): TypeMap[Type] {
         const isSingleton = binding.lifecycle === Lifecycle.Singleton
             || binding.lifecycle === Lifecycle.LazySingleton
         let instance = this.getActivatedInstance(binding, isSingleton)
@@ -113,7 +113,7 @@ export default class DIScope<TypeMap extends object>
         if (this._parent != null)
             return this._parent.getAll(type, name)
 
-        const bindings = this._activator.findAllBindingsOf(type, name)
+        const bindings = this._activator.findAllOf(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (bindings.length === 0) return []
         if (bindings.length === 1) {
             return Array.of(this.get(type, name))
@@ -144,7 +144,7 @@ export default class DIScope<TypeMap extends object>
         if (this._isDisposed)
             throw DIError.illegalClosedScopeAccess(this.key)
 
-        const binding = this._activator.findBindingOf(type, name)
+        const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)
             throw DIError.bindingNotFound(type, name, this.key)
 
@@ -176,7 +176,7 @@ export default class DIScope<TypeMap extends object>
     }
 
     private pushInstance<Type extends keyof TypeMap>(
-        binding: IEntityBinding<TypeMap, Type>,
+        binding: ITypeBinding<TypeMap, Type>,
         instance: TypeMap[Type],
     ): void {
         let typeGroup = this._scopedInstancesMap.get(binding.type)

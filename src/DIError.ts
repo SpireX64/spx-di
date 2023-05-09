@@ -1,16 +1,16 @@
 import { TBindingName, TScopeKey } from './types'
-import IEntityBinding, {getStringName} from './abstract/IEntityBinding'
+import ITypeBinding, { getStringName } from './abstract/ITypeBinding'
 import Lifecycle from './Lifecycle'
 
 export enum DIErrorType {
-    BindingConflict,
-    BindingNotFound,
-    IllegalClosedScopeAccess,
-    DependencyCycle,
-    InvalidMultiBinding,
-    NullableBinding,
-    MissingRequiredType,
-    IllegalState,
+    BindingConflict= 'BindingConflict',
+    BindingNotFound = 'BindingNotFound',
+    IllegalClosedScopeAccess = 'IllegalClosedScopeAccess',
+    DependencyCycle = 'DependencyCycle',
+    InvalidMultiBinding = 'InvalidMultiBinding',
+    NullableBinding = 'NullableBinding',
+    MissingRequiredType = 'MissingRequiredType',
+    IllegalState = 'IllegalState',
 }
 
 function getTypeName(type: string | symbol | number, bindingName: TBindingName): string {
@@ -34,7 +34,7 @@ export default class DIError {
     public static bindingNotFound(type: string | symbol | number, bindingName: TBindingName, scope: TScopeKey): DIError {
         return new DIError(
             DIErrorType.BindingNotFound,
-            `Binding of type "${getTypeName(type, bindingName)}" not found in scope ${getStringName(scope)}`,
+            `Binding of type "${getTypeName(type, bindingName)}" not found in scope "${getStringName(scope)}"`,
         )
     }
 
@@ -45,7 +45,7 @@ export default class DIError {
         )
     }
 
-    public static dependencyCycle(activationChain: readonly IEntityBinding<any, any>[]): DIError {
+    public static dependencyCycle(activationChain: readonly ITypeBinding<any, any>[]): DIError {
         const graph = activationChain.map(it => {
             let typeName = getStringName(it.type)
             if (it.name != null)
@@ -91,5 +91,8 @@ export default class DIError {
     ) {
         this.innerError = innerError ?? null
         Error.captureStackTrace(this, DIError)
+    }
+    public toString(): string {
+        return `DIError: ${this.message}`
     }
 }

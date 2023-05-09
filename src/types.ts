@@ -1,5 +1,5 @@
 import IDependencyResolver from './abstract/IDependencyResolver'
-import IEntityBinding from './abstract/IEntityBinding'
+import {TBindingsFilter} from './abstract/IContainerConfigurator'
 
 /** Factory function of type */
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
@@ -26,9 +26,8 @@ export interface IScopeDisposable extends IDisposable {
 }
 
 export type TRequiredTypeToken<TypeMap extends object, Type extends keyof TypeMap> = {
-    type: Type,
-    name: TBindingName | null,
-    scope: TScopeKey | null
+    type: Type
+    filter?: TBindingsFilter
 }
 
 export type TConflictResolution =
@@ -62,12 +61,6 @@ export type TBindingOptions = {
      */
     conflict?: TConflictResolution,
 }
-
-/** Array list of bindings */
-export type TBindingsList<TypeMap extends object> = IEntityBinding<TypeMap, keyof TypeMap>[]
-
-/** Immutable array list ob bindings */
-export type TReadonlyBindingsList<TypeMap extends object> = readonly IEntityBinding<TypeMap, keyof TypeMap>[]
 
 /** Instance provider of specific type */
 export type TProvider<Type> = () => Type
