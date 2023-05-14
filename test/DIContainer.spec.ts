@@ -351,6 +351,7 @@ describe('DIContainer', function () {
     it('Get lazy instance', () => {
         // Arrange ----
         const expectedValue = 42
+        const expectedNewValue = 12
         const factory = jest.fn(r => ({ value: r.get('value') }))
 
         const container = DIContainer.builder<{
@@ -367,6 +368,8 @@ describe('DIContainer', function () {
         const factoryCallsAfterGetLazyInstance = factory.mock.calls.length
         const value = lazyInstance.value
         const factoryCallsAfterGetValueByInstance = factory.mock.calls.length
+        lazyInstance.value = expectedNewValue
+
 
         // Assert ------
         expect(factoryCallsBeforeGetLazyInstance).toBe(0)
@@ -374,6 +377,13 @@ describe('DIContainer', function () {
         expect(factoryCallsAfterGetValueByInstance).toBe(1) // Object was created on first interaction with lazy-instance
         expect(isLazyInstance(lazyInstance)).toBeTruthy()
         expect(value).toBe(expectedValue)
+        expect(lazyInstance.value).toBe(expectedNewValue)
+        // @ts-ignore
+        expect(lazyInstance.notDefinedProperty).toBeUndefined()
+        expect(() => {
+            // @ts-ignore
+            lazyInstance.notDefinedProperty = 'foobar'
+        }).toThrow()
     })
 
     it('Dont create lazy for instances & singletons', () => {
@@ -499,6 +509,14 @@ describe('DIContainer', function () {
         expect(disposable.scopeKey).toBe(DIContainer.globalScopeKey)
         expect(disposable.isScopeDisposed()).toBeFalsy() // Global scope can't be disposed, but no error
         expect(disposeFunction.mock.calls.length).toBe(0)
+    })
+
+    it('Dispose non-exists scope', () => {
+        const container = DIContainer.builder().build()
+
+        expect(() => {
+            container.disposeScope('non-exists')
+        }).not.toThrowError()
     })
 
     it('Get specific scope disposable', () => {

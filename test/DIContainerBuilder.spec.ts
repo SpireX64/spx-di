@@ -1,10 +1,10 @@
 import {
+    createDIModule,
     DIContainer,
     DIContainerBuilder,
-    createDIModule,
-    Lifecycle,
     DIError,
     DIErrorType,
+    Lifecycle,
     TypeMapOfModule,
 } from '../src'
 
@@ -37,6 +37,24 @@ describe('DIContainerBuilder', () => {
 
         // Assert -----
         expect(binding).toBeNull()
+    })
+
+    it('Get all bindings', () => {
+        // Arrange ----
+        const valueA = 'foo'
+        const valueB = 'bar'
+        const builder = DIContainer.builder<{ value: string }>()
+        builder.bindInstance('value', valueA, { name: 'A' })
+        builder.bindInstance('value', valueB, { name: 'B' })
+
+        // Act --------
+        const bindings = builder.getAllBindings()
+        const hasValueA = bindings.some(it => it.name === 'A' && it.instance === valueA)
+        const hasValueB = bindings.some(it => it.name === 'B' && it.instance === valueB)
+
+        // Assert -----
+        expect(hasValueA).toBeTruthy()
+        expect(hasValueB).toBeTruthy()
     })
 
     it('Value binding', () => {
@@ -117,36 +135,69 @@ describe('DIContainerBuilder', () => {
 
     it('Conditional binding by boolean', () => {
         // Arrange -----
+        const requiredExistsType = 'rty'
+        const requiredMissingType = 'zxc'
         const builder = DIContainer.builder<{
             foo: string
             bar: string
             qwe: string
+            asd: string
+            zxc: string
+            rty: string
+            fgh: string
         }>()
 
         // Act ---------
         builder
             .when(true).bindInstance('foo', 'FOO')
             .when(false).bindInstance('bar', 'BAR')
+            .when(true).bindFactory('asd', () => 'ASD')
+            .when(false).bindFactory('zxc', () => 'ZXC')
+            .when(true).when(true).bindInstance('rty', 'RTY')
+            .when(true).when(false).bindInstance('fgh', 'FGH')
             .bindInstance('qwe', 'QWE')
+            .when(true).requireType(requiredMissingType)
+            .when(false).requireType(requiredExistsType)
 
         const fooBinding = builder.find('foo')
         const barBinding = builder.find('bar')
+        const asdBinding = builder.find('asd')
+        const zxcBinding = builder.find('zxc')
+        const rtyBinding = builder.find('rty')
+        const fghBinding = builder.find('fgh')
         const qweBinding = builder.find('qwe')
+
+        let error: DIError | null = null
+        try {
+            builder.build()
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e
+        }
 
         // Assert ------
         expect(fooBinding).not.toBeNull()
         expect(barBinding).toBeNull()
+        expect(asdBinding).not.toBeNull()
+        expect(zxcBinding).toBeNull()
+        expect(rtyBinding).not.toBeNull()
+        expect(fghBinding).toBeNull()
         expect(qweBinding).not.toBeNull()
+
+        expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
+        expect(error?.message).toContain(requiredMissingType)
     })
 
     it('Force nullable instance binding', () => {
         // Arrange -----
-        const builder = DIContainer.builder<{ typeKey: string }>()
+        const key = 'typeKey'
+        const builder = DIContainer.builder<{ [key]: string }>()
         let error: DIError | null = null
 
         // Act ---------
         try {
-            builder.bindInstance('typeKey', null!)
+            builder.bindInstance(key, null!)
         } catch (e) {
             if (e instanceof DIError)
                 error = e
@@ -155,16 +206,39 @@ describe('DIContainerBuilder', () => {
         // Assert
         expect(error).not.toBeNull()
         expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.message).toContain(key)
     })
 
-    it('Force nullable factory binding', () => {
+    it('Force nullable named instance binding', () => {
         // Arrange -----
-        const builder = DIContainer.builder<{ typeKey: string }>()
+        const key = 'typeKey'
+        const name = 'test'
+        const builder = DIContainer.builder<{ [key]: string }>()
         let error: DIError | null = null
 
         // Act ---------
         try {
-            builder.bindFactory('typeKey', null!)
+            builder.bindInstance(key, null!, { name })
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e
+        }
+
+        // Assert
+        expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.message).toContain(`${key}:${name}`)
+    })
+
+    it('Force nullable factory binding', () => {
+        // Arrange -----
+        const key = 'typeKey'
+        const builder = DIContainer.builder<{ [key]: string }>()
+        let error: DIError | null = null
+
+        // Act ---------
+        try {
+            builder.bindFactory(key, null!)
         } catch (e) {
             if (e instanceof DIError)
                 error = e
@@ -172,6 +246,27 @@ describe('DIContainerBuilder', () => {
         // Assert ------
         expect(error).not.toBeNull()
         expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.message).toContain(key)
+    })
+
+    it('Force nullable named factory binding', () => {
+        // Arrange -----
+        const key = 'typeKey'
+        const name = 'test'
+        const builder = DIContainer.builder<{ [key]: string }>()
+        let error: DIError | null = null
+
+        // Act ---------
+        try {
+            builder.bindFactory(key, null!, Lifecycle.Singleton, { name })
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e
+        }
+        // Assert ------
+        expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.message).toContain(`${key}:${name}`)
     })
 
     it('Bind named instance', () => {
@@ -272,12 +367,13 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{ typeKey: string }>()
 
         // Act ---------------
+        const string3Factory = () => strings[3]
         builder
             .bindInstance('typeKey', strings[0])
             .bindInstance('typeKey', strings[1])
             .bindInstance('typeKey', strings[2], { name })
-            .bindInstance('typeKey', strings[3], { name })
-            .bindInstance('typeKey', strings[4], { name })
+            .bindFactory('typeKey', string3Factory, Lifecycle.Singleton, { name, conflict: 'bind' })
+            .bindInstance('typeKey', strings[4], { name, conflict: 'bind' })
 
         const defaultBindings = builder.findAllOf('typeKey')
         const namedBindings = builder.findAllOf('typeKey', it => it.name === name)
@@ -290,7 +386,7 @@ describe('DIContainerBuilder', () => {
         expect(defaultBindings[1].instance).toBe(strings[1])
 
         expect(namedBindings[0].instance).toBe(strings[2])
-        expect(namedBindings[1].instance).toBe(strings[3])
+        expect(namedBindings[1].factory).toBe(string3Factory)
         expect(namedBindings[2].instance).toBe(strings[4])
     })
 
@@ -369,6 +465,7 @@ describe('DIContainerBuilder', () => {
         const builder = DIContainer.builder<{
             typeKey: string,
         }>()
+            .requireType('typeKey', { name: 'foo', scope: '' })
             .requireType('typeKey', { name: 'foo', scope: '' })
             .bindInstance('typeKey', 'Hello')
 

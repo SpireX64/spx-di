@@ -270,18 +270,18 @@ export class DIContainerBuilder<TypeMap extends object> implements IContainerCon
         for (let i = 0; i < this._requiredTypes.length; ++i) {
             const token = this._requiredTypes[i]
             let typeBindings
-            if (token.filter) {
+            if (token.filter != null) {
                 typeBindings = this.findAllOf(token.type, it => {
-                    const name = token.filter?.name ?? null
+                    const name = token.filter!.name ?? null
                     if (it.name != name) return false
-                    if (it.scope == null || token.filter?.scope == null) return true
-                    return checkIsAvailableInScope(it.scope, token.filter.scope)
+                    if (it.scope == null || token.filter!.scope == null) return true
+                    return checkIsAvailableInScope(it.scope, token.filter!.scope)
                 })
             } else {
                 typeBindings = this.findAllOf(token.type)
             }
             if (typeBindings.length === 0)
-                throw DIError.missingRequiredType(token.type, token?.filter?.name ?? null, token.filter?.scope)
+                throw DIError.missingRequiredType(token.type, token.filter?.name ?? null, token.filter?.scope)
         }
     }
 }
