@@ -1,10 +1,10 @@
 import {
+    createDIModule,
     DIContainer,
     DIContainerBuilder,
-    createDIModule,
-    Lifecycle,
     DIError,
     DIErrorType,
+    Lifecycle,
     TypeMapOfModule,
 } from '../src'
 

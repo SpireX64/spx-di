@@ -55,18 +55,15 @@ export default class DIScope<TypeMap extends object>
             return binding.instance
 
         let instance: TypeMap[Type] | undefined
-        if (allowInheritedGet) {
-            instance = this._parent?.resolveInstanceByBinding(binding)
+        if (this._parent && allowInheritedGet) {
+            instance = this._parent.resolveInstanceByBinding(binding)
             if (instance != null)
                 return instance as TypeMap[Type]
         }
 
         const typeGroup = this._scopedInstancesMap.get(binding.type)
         if (!typeGroup) return null
-
-        const instances = typeGroup.get(binding.name)
-        if (!instances || instances.length == 0) return null
-
+        const instances = typeGroup.get(binding.name)!
         return instances[0] as TypeMap[Type]
     }
 
@@ -115,11 +112,7 @@ export default class DIScope<TypeMap extends object>
 
         const bindings = this._activator.findAllOf(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (bindings.length === 0) return []
-        if (bindings.length === 1) {
-            return Array.of(this.get(type, name))
-        }
-
-        const instances = bindings.filter(it => it != null).map(it => it.instance) as TypeMap[Type][]
+        const instances = bindings.filter(it => it.instance != null).map(it => it.instance) as TypeMap[Type][]
         const activatedInstances = (this._scopedInstancesMap.get(type)?.get(name) ?? []) as TypeMap[Type][]
         return instances.concat(activatedInstances)
     }

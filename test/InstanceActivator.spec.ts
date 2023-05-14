@@ -103,6 +103,34 @@ describe('InstanceActivator', () => {
         expect(error?.message).toMatch('A -> B -> A')
     })
 
+    it('Short dependency cycle with names', () => {
+        // Arrange --------------
+        const keyA = 'A'
+        const keyB = 'B'
+        const name = 'test'
+        const registrar = new BindingsRegistrar<{ A: string, B: string }>()
+        registrar.register(createBinding(keyA, { name, lifecycle: Lifecycle.Transient, factory: r => r.get(keyB) }), 'bind')
+        registrar.register(createBinding(keyB, { lifecycle: Lifecycle.Transient, factory: r => r.get(keyA, name) }), 'bind')
+
+        const activator = new InstanceActivator(registrar)
+        const container = new DIContainer(activator)
+
+        let error: DIError | null = null
+
+        // Act ------------------
+        try {
+            container.get(keyA, name)
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e
+        }
+
+        // Assert ---------------
+        expect(error).not.toBeNull()
+        expect(error?.errorType).toBe(DIErrorType.DependencyCycle)
+        expect(error?.message).toMatch(`${keyA}:${name} -> ${keyB} -> ${keyA}:${name}`)
+    })
+
     it('Long dependency cycle', () => {
         // Arrange --------------
         const registrar = new BindingsRegistrar<{ A: string, B: string, C: string, D: string, E: string }>()
