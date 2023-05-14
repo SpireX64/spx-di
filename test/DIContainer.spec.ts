@@ -4,7 +4,7 @@ import {
     DIErrorType,
     IDisposable,
     IScopeDisposable,
-    isLazyInstance,
+    isPhantomInstance,
     Lifecycle,
     TScopeKey,
 } from '../src'
@@ -348,7 +348,7 @@ describe('DIContainer', function () {
         expect(instance1.value).toBe(expectedValue)
     })
 
-    it('Get lazy instance', () => {
+    it('Get phantom instance', () => {
         // Arrange ----
         const expectedValue = 42
         const expectedNewValue = 12
@@ -363,30 +363,30 @@ describe('DIContainer', function () {
             .build()
 
         // Act ---------
-        const factoryCallsBeforeGetLazyInstance = factory.mock.calls.length
-        const lazyInstance = container.getLazy('object')
-        const factoryCallsAfterGetLazyInstance = factory.mock.calls.length
-        const value = lazyInstance.value
+        const factoryCallsBeforeGetInstance = factory.mock.calls.length
+        const instance = container.getPhantom('object')
+        const factoryCallsAfterGetInstance = factory.mock.calls.length
+        const value = instance.value
         const factoryCallsAfterGetValueByInstance = factory.mock.calls.length
-        lazyInstance.value = expectedNewValue
+        instance.value = expectedNewValue
 
 
         // Assert ------
-        expect(factoryCallsBeforeGetLazyInstance).toBe(0)
-        expect(factoryCallsAfterGetLazyInstance).toBe(0) // There is an instance, but the factory is still not being called
+        expect(factoryCallsBeforeGetInstance).toBe(0)
+        expect(factoryCallsAfterGetInstance).toBe(0) // There is an instance, but the factory is still not being called
         expect(factoryCallsAfterGetValueByInstance).toBe(1) // Object was created on first interaction with lazy-instance
-        expect(isLazyInstance(lazyInstance)).toBeTruthy()
+        expect(isPhantomInstance(instance)).toBeTruthy()
         expect(value).toBe(expectedValue)
-        expect(lazyInstance.value).toBe(expectedNewValue)
+        expect(instance.value).toBe(expectedNewValue)
         // @ts-ignore
-        expect(lazyInstance.notDefinedProperty).toBeUndefined()
+        expect(instance.notDefinedProperty).toBeUndefined()
         expect(() => {
             // @ts-ignore
-            lazyInstance.notDefinedProperty = 'foobar'
+            instance.notDefinedProperty = 'foobar'
         }).toThrow()
     })
 
-    it('Dont create lazy for instances & singletons', () => {
+    it('Dont create phantom for instances & singletons', () => {
         // Arrange -------
         const expectedValue = 42
         const singletonFactory = jest.fn(r => ({ value: r.get('value') }))
@@ -402,21 +402,21 @@ describe('DIContainer', function () {
             .build()
 
         // Act --------------
-        const value = container.getLazy('value')
-        const singletonObject = container.getLazy('singletonObject')
-        const lazySingletonObjectA = container.getLazy('lazySingletonObject')
-        const valueFromLazyA = lazySingletonObjectA.value
-        const lazySingletonObjectB = container.getLazy('lazySingletonObject')
-        const valueFromLazyB = lazySingletonObjectA.value
+        const value = container.getPhantom('value')
+        const singletonObject = container.getPhantom('singletonObject')
+        const phantomSingletonObjectA = container.getPhantom('lazySingletonObject')
+        const valueFromLazyA = phantomSingletonObjectA.value
+        const phantomSingletonObjectB = container.getPhantom('lazySingletonObject')
+        const valueFromLazyB = phantomSingletonObjectA.value
 
         // Assert -----------
-        expect(isLazyInstance(value)).toBeFalsy()
-        expect(isLazyInstance(singletonObject)).toBeFalsy()
-        expect(isLazyInstance(lazySingletonObjectA)).toBeTruthy()
+        expect(isPhantomInstance(value)).toBeFalsy()
+        expect(isPhantomInstance(singletonObject)).toBeFalsy()
+        expect(isPhantomInstance(phantomSingletonObjectA)).toBeTruthy()
         expect(valueFromLazyA).toBe(expectedValue + 1)
 
-        // Instance was created, lazy wrapper is not required
-        expect(isLazyInstance(lazySingletonObjectB)).toBeFalsy()
+        // Instance was created, phantom wrapper is not required
+        expect(isPhantomInstance(phantomSingletonObjectB)).toBeFalsy()
         expect(valueFromLazyB).toBe(expectedValue + 1)
 
         expect(lazySingletonFactory.mock.calls.length).toBe(1) // Lazy singleton instance re-used

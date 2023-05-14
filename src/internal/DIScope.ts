@@ -9,7 +9,7 @@ import {
 import IDependencyResolver from '../abstract/IDependencyResolver'
 import InstanceActivator from './InstanceActivator'
 import ITypeBinding, { checkIsAvailableInScope } from '../abstract/ITypeBinding'
-import { createLazyInstance } from './LazyInstance'
+import { createPhantomInstance } from './PhantomInstance'
 import DIError from '../DIError'
 
 export default class DIScope<TypeMap extends object>
@@ -133,7 +133,7 @@ export default class DIScope<TypeMap extends object>
         return provider
     }
 
-    public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+    public getPhantom<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         if (this._isDisposed)
             throw DIError.illegalClosedScopeAccess(this.key)
 
@@ -149,7 +149,7 @@ export default class DIScope<TypeMap extends object>
             return instance
 
         // Instance was not activated, building lazy-instance
-        return createLazyInstance(binding.type, this.getProvider(type))
+        return createPhantomInstance(binding.type, this.getProvider(type))
     }
 
     public getScopeDisposable(): IScopeDisposable {

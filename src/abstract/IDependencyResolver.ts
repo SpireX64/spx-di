@@ -36,14 +36,14 @@ export default interface IDependencyResolver<TypeMap extends object> {
     getProvider<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TProvider<TypeMap[Type]>
 
     /**
-     * Returns lazy instance of requested {@link type}.
+     * Returns phantom instance of requested {@link type}.
      * If instance was activated, returns real instance of given type.
-     * Or else, returns lazy instance, that will activate real instance after first interaction with it.
+     * Or else, returns phantom instance, that will activate real instance after first interaction with it.
      * @param type - the type of required instance
      * @param name - (opt.) instance name, to request instance type by name
-     * @returns instance or lazy-instance of given type
+     * @returns instance or phantom-instance of given type
      */
-    getLazy<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type]
+    getPhantom<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type]
 
     /** Request disposable of scope */
     getScopeDisposable(): IScopeDisposable

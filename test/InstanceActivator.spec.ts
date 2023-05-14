@@ -12,7 +12,7 @@ import createBinding from './utils/createBinding'
 
 function createDependencyResolverMock<TypeMap extends object>(override?: Partial<IDependencyResolver<TypeMap>>) {
     const get = jest.fn(override?.get)
-    const getLazy = jest.fn(override?.getLazy)
+    const getLazy = jest.fn(override?.getPhantom)
     const getScopeDisposable = jest.fn(override?.getScopeDisposable)
     const getOptional = jest.fn(override?.getOptional)
     const getProvider = jest.fn(override?.getProvider)
@@ -24,7 +24,7 @@ function createDependencyResolverMock<TypeMap extends object>(override?: Partial
         getScopeDisposable,
         mockObject: <IDependencyResolver<TypeMap>>{
             get,
-            getLazy,
+            getPhantom: getLazy,
             getScopeDisposable,
             getOptional,
             getProvider,

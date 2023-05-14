@@ -12,7 +12,7 @@ export default function createResolverMock<TypeMap extends object>(): IDependenc
         getAll<Type extends keyof TypeMap>(type: Type): ReadonlyArray<TypeMap[Type]> {
             throw new Error(`Stub!${type.toString()}`)
         },
-        getLazy<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
+        getPhantom<Type extends keyof TypeMap>(type: Type): TypeMap[Type] {
             throw new Error(`Stub!${type.toString()}`)
         },
         getProvider<Type extends keyof TypeMap>(type: Type): TProvider<TypeMap[Type]> {

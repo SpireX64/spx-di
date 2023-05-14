@@ -1,5 +1,5 @@
 export {default as DIContainer, DIContainerBuilder, createDIModule} from './DIContainer'
-export { isLazyInstance } from './internal/LazyInstance'
+export { isPhantomInstance } from './internal/PhantomInstance'
 export { default as Lifecycle } from './Lifecycle'
 export { default as DIError, DIErrorType } from './DIError'
 export type { TypeMapOfContainer, TypeMapOfModule } from './DIContainer'

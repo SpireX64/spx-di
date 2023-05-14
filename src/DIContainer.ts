@@ -43,8 +43,8 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         return this._globalScope.getAll(type, name)
     }
 
-    public getLazy<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
-        return this._globalScope.getLazy(type, name);
+    public getPhantom<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
+        return this._globalScope.getPhantom(type, name);
     }
 
     public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {

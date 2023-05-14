@@ -210,7 +210,7 @@ describe('DIScope', function () {
         // Act ----------
         let error: DIError | null = null
         try {
-            scope.getLazy('key')
+            scope.getPhantom('key')
         } catch (e) {
             if (e instanceof DIError)
                 error = e
@@ -470,7 +470,7 @@ describe('DIScope', function () {
         // Act -------------
         let error: DIError | null = null
         try {
-            scope.getLazy('key')
+            scope.getPhantom('key')
         } catch (e) {
             if (e instanceof DIError)
                 error = e
