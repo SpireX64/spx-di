@@ -30,13 +30,13 @@ export type TypeMapOfDIModule<TModule> = TModule extends TAnyDIModule<infer Type
 
 export const DIModule = {
     static: (key: TModuleKey) => {
-        function create<TypeMap extends object>(
-            build: TStaticDIModuleBuildDelegate<TypeMap>,
+        function create<TypeMap extends object = {}, TDependenciesTypeMap extends object = {}>(
+            build: TStaticDIModuleBuildDelegate<TypeMap & TDependenciesTypeMap>,
         ): TStaticDIModule<TypeMap> {
             return {
                 key,
                 type: 'static',
-                buildDelegate: build,
+                buildDelegate: build as TStaticDIModuleBuildDelegate<TypeMap>,
             }
         }
         return { create }
@@ -45,15 +45,15 @@ export const DIModule = {
         key: TModuleKey,
         importDelegate: TDynamicDIModuleImportDelegate<JSModule>,
     ) => {
-        function create<TypeMap extends object = {}>(
-            buildDelegate: TDynamicDIModuleBuildDelegate<TypeMap, JSModule>,
+        function create<TypeMap extends object = {}, TDependenciesTypeMap extends object = {}>(
+            build: TDynamicDIModuleBuildDelegate<TypeMap & TDependenciesTypeMap, JSModule>,
         ): TDynamicDIModule<TypeMap, JSModule> {
             return {
                 key,
                 type: 'dynamic',
                 importDelegate,
-                buildDelegate,
-            };
+                buildDelegate: build as TDynamicDIModuleBuildDelegate<TypeMap, JSModule>,
+            }
         }
 
         return { create }
