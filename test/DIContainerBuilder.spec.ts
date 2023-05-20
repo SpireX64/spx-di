@@ -1,12 +1,12 @@
 import {
-    createDIModule,
     DIContainer,
     DIContainerBuilder,
     DIError,
     DIErrorType,
     Lifecycle,
-    TypeMapOfModule,
 } from '../src'
+import { DIModule } from '../src/modules/DIModule'
+import type { SomeClass } from './utils/stubs/dynamicModuleStub'
 
 describe('DIContainerBuilder', () => {
     it('Create builder via static method', () => {
@@ -413,18 +413,18 @@ describe('DIContainerBuilder', () => {
 
     it('Separate DI configuration to modules', () => {
         // Arrange -----
-        const moduleA = createDIModule<{ valueA: number }>(builder => {
+        const moduleA = DIModule.static('moduleA').create<{ valueA: number }>(builder => {
             builder.bindInstance('valueA', 42)
         })
 
-        const moduleB = createDIModule<{ valueB: number }, TypeMapOfModule<typeof moduleA>>(builder => {
+        const moduleB = DIModule.static('moduleB').create<{ valueB: number }>(builder => {
             builder.bindInstance('valueB', 256)
         })
 
         // Act ---------
         const builder = DIContainer.builder()
-            .useModule(moduleA)
-            .useModule(moduleB)
+            .addModule(moduleA)
+            .addModule(moduleB)
 
         const bindingValueA = builder.find('valueA')
         const bindingValueB = builder.find('valueB')
@@ -547,5 +547,37 @@ describe('DIContainerBuilder', () => {
 
         // Assert ----------
         expect(() => builder.build()).not.toThrow()
+    })
+
+    it('Use dynamic module', () => {
+        type TypeMap = {
+            value: string
+            instance: SomeClass,
+        }
+        // Arrange ------
+        const moduleKey = 'asyncModule'
+
+        const dynamicModule = DIModule.dynamic(
+            moduleKey,
+            () => import('./utils/stubs/dynamicModuleStub'),
+        ).create<TypeMap>((builder, { someValue , SomeClass}) => {
+            builder.bindInstance('value', someValue)
+            builder.bindFactory('instance', c => new SomeClass(c.get('value')))
+        })
+
+        // Act ----------
+
+        const builder = DIContainer.builder()
+            .addModule(dynamicModule)
+
+        const bindingInstance = builder.find('value')
+        const bindingFactory = builder.find('instance')
+
+        // Assert -------
+        expect(bindingInstance).not.toBeNull()
+        expect(bindingInstance?.instance).not.toBeNull()
+
+        expect(bindingFactory).not.toBeNull()
+        expect(bindingFactory?.factory).not.toBeNull()
     })
 })

@@ -17,18 +17,22 @@ import BindingsRegistrar from './internal/BindingsRegistrar'
 import IBindingsRepository, { TBindingsFilterPredicate } from './abstract/IBindingsRepository'
 import IContainerConfigurator, { TBindingsFilter } from './abstract/IContainerConfigurator'
 import ConditionalConfigurator from './internal/ConditionalConfigurator'
+import { DynamicModulesManager } from './modules/DynamicModulesManager'
+import { TDynamicDIModule, TStaticDIModule } from './modules/DIModule'
 
 export default class DIContainer<TypeMap extends object> implements IDependencyResolver<TypeMap> {
 
     public static readonly globalScopeKey: TScopeKey = Symbol('global')
     private readonly _globalScope: DIScope<TypeMap>
     private readonly _activator: InstanceActivator<TypeMap>
+    private readonly _dynamicModuleManager: DynamicModulesManager
     private readonly _scopes = new Map<TScopeKey, DIScope<TypeMap>>()
 
-    public constructor(activator: InstanceActivator<TypeMap>) {
+    public constructor(activator: InstanceActivator<TypeMap>, dynamicModuleManager: DynamicModulesManager) {
         this._activator = activator
         this._globalScope = new DIScope<TypeMap>(DIContainer.globalScopeKey, activator)
         this._scopes.set(this._globalScope.key, this._globalScope)
+        this._dynamicModuleManager = dynamicModuleManager
     }
 
     public get<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
@@ -74,6 +78,10 @@ export default class DIContainer<TypeMap extends object> implements IDependencyR
         if (!scope) return
         this._scopes.delete(key)
         scope.dispose()
+    }
+
+    public loadModuleAsync(module: TDynamicDIModule<TypeMap, any>): Promise<void> {
+        return this._dynamicModuleManager.loadModuleAsync(module)
     }
 
     public static builder<TypeMap extends object = {}>(){
@@ -171,6 +179,7 @@ interface IDIModuleBuilder<TypeMap extends object> extends IDIConfiguration<Type
 export class DIContainerBuilder<TypeMap extends object> implements IContainerConfigurator<TypeMap>, IBindingsRepository<TypeMap> {
     private readonly _registrar = new BindingsRegistrar<TypeMap>()
     private readonly _requiredTypes: TRequiredTypeToken<TypeMap, any>[] = []
+    private readonly _dynamicModulesManager = new DynamicModulesManager()
 
     // region: IBindingsRepository implementation
 
@@ -238,16 +247,29 @@ export class DIContainerBuilder<TypeMap extends object> implements IContainerCon
 
     // endregion: IContainerConfigurator implementation
 
-    /**
-     * Add module to container
-     * @param module - Module definition
-     * @returns Container builder expanded by {@link module} type map
-     */
-    public useModule<ModuleTypeMap extends object>(module: DIModuleFunction<ModuleTypeMap, any>): DIContainerBuilder<TypeMap & ModuleTypeMap> {
+    public addModule<TModuleTypeMap extends object>(module: TStaticDIModule<TModuleTypeMap> | TDynamicDIModule<TModuleTypeMap, any>): DIContainerBuilder<TypeMap & TModuleTypeMap> {
         // @ts-ignore
-        module(this as DIContainerBuilder<TypeMap & ModuleTypeMap>)
+        const moduleConfigurator = this as IContainerConfigurator<TModuleTypeMap>
+        if (module.type === 'dynamic') {
+            const moduleProxy = this._dynamicModulesManager.createDynamicModuleProxy(module)
+            // Using wrapper to prevent bindings of pure singletons
+            const dynamicModuleConfigurator = <IContainerConfigurator<TModuleTypeMap>> {
+                when: moduleConfigurator.when.bind(moduleConfigurator),
+                requireType: moduleConfigurator.requireType.bind(moduleConfigurator),
+                bindInstance: moduleConfigurator.bindInstance.bind(moduleConfigurator),
+                bindFactory: (type, factory, lifecycle, options) => {
+                    if (lifecycle === Lifecycle.Singleton) throw DIError.illegalState('Attempt to bind singleton with dynamic module')
+                    return moduleConfigurator.bindFactory(type, factory, lifecycle ?? Lifecycle.LazySingleton, options)
+                },
+            }
+            module.buildDelegate(dynamicModuleConfigurator, moduleProxy)
+            this._dynamicModulesManager.addModule(module)
+        } else {
+            // @ts-ignore
+            module.buildDelegate(moduleConfigurator)
+        }
         // @ts-ignore
-        return this as DIContainerBuilder<TypeMap & ModuleTypeMap>
+        return this as DIContainerBuilder<TypeMap & TModuleTypeMap>
     }
 
     /**
@@ -257,7 +279,7 @@ export class DIContainerBuilder<TypeMap extends object> implements IContainerCon
     public build(): DIContainer<TypeMap> {
         this.verifyRequiredTypes()
         const activator = new InstanceActivator(this._registrar)
-        return new DIContainer(activator)
+        return new DIContainer(activator, this._dynamicModulesManager)
     }
 
     /**
@@ -288,25 +310,3 @@ export class DIContainerBuilder<TypeMap extends object> implements IContainerCon
 
 
 export type TypeMapOfContainer<TContainer> = TContainer extends DIContainer<infer TypeMap> ? TypeMap : never
-/**
- * Module definition function
- * @param TypeMap - Type map provided by the module
- * @param DependencyTypeMap - TypeMap that the module depends on
- * @param builder - Reference of builder
- */
-export type DIModuleFunction<TypeMap extends object, DependencyTypeMap extends object> = (
-    builder: IDIModuleBuilder<TypeMap & DependencyTypeMap>,
-) => void
-
-/**
- * Utility type. Retrieves a TypeMap type from a module type
- * @see DIModuleFunction
- */
-export type TypeMapOfModule<Module> = Module extends DIModuleFunction<infer TypeMap, any> ? TypeMap : never
-
-/**
- * Module definition function
- */
-export const createDIModule = <TypeMap extends object, DependencyTypeMap extends object = {}>(
-    moduleFunc: DIModuleFunction<TypeMap, DependencyTypeMap>,
-) => moduleFunc;

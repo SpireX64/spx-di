@@ -1,5 +1,6 @@
 import IDependencyResolver from './abstract/IDependencyResolver'
-import {TBindingsFilter} from './abstract/IContainerConfigurator'
+import { TBindingsFilter } from './abstract/IContainerConfigurator'
+import { TDynamicDIModule } from './modules/DIModule'
 
 /** Factory function of type */
 export type TInstanceFactory<TypeMap extends object, Type extends keyof TypeMap> =
@@ -60,6 +61,12 @@ export type TBindingOptions = {
      * @default bind
      */
     conflict?: TConflictResolution,
+}
+
+export type TDynamicModuleValue<TypeMap extends object, TValue> = {
+    dynamic: true
+    module: TDynamicDIModule<TypeMap, any>
+    get: () => TValue
 }
 
 /** Instance provider of specific type */

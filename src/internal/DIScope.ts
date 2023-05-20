@@ -3,6 +3,7 @@ import {
     IDisposable,
     IScopeDisposable,
     TBindingName,
+    TDynamicModuleValue,
     TProvider,
     TScopeKey,
 } from '../types'
@@ -51,8 +52,15 @@ export default class DIScope<TypeMap extends object>
         binding: ITypeBinding<TypeMap, Type>,
         allowInheritedGet: boolean,
     ): TypeMap[Type] | null {
-        if (binding.instance != null)
+        if (binding.instance != null) {
+            // Check, is dynamic module instance
+            if (typeof binding.instance === 'function' && 'dynamic' in binding.instance) {
+                // @ts-ignore
+                const dynamic = binding.instance as TDynamicModuleValue<TypeMap, TypeMap[Type]>
+                return dynamic.get()
+            }
             return binding.instance
+        }
 
         let instance: TypeMap[Type] | undefined
         if (this._parent && allowInheritedGet) {

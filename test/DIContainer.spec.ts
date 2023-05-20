@@ -8,6 +8,8 @@ import {
     Lifecycle,
     TScopeKey,
 } from '../src'
+import { DIModule } from '../src/modules/DIModule'
+import type { SomeClass } from './utils/stubs/dynamicModuleStub'
 
 describe('DIContainer', function () {
     it('Try get not bound value', () => {
@@ -583,5 +585,58 @@ describe('DIContainer', function () {
         expect(value.name).toBe(expectedValue)
         expect(value2.name).toBe(expectedValue)
         expect(value2).toBe(value)
+    })
+
+    it('Add static module', () => {
+        type ModuleTypeMap = {
+            typeKey: string
+            someNumber: number
+        }
+        const moduleKey = Symbol('staticTestModule')
+        const expectedValue = 'Lorem'
+        const expectedNumber = 42
+        // Arrange ---------
+        const staticModule = DIModule.static(moduleKey).create<ModuleTypeMap>((builder) => {
+            builder.bindInstance('typeKey', expectedValue)
+            builder.bindFactory('someNumber', () => expectedNumber)
+        })
+
+        // Act -------------
+        const container = DIContainer.builder()
+            .addModule(staticModule)
+            .build()
+
+        // Assert ----------
+        expect(container.get('typeKey')).toBe(expectedValue)
+        expect(container.get('someNumber')).toBe(expectedNumber)
+    })
+
+    it('Add dynamic module', async () => {
+        type ModuleTypeMap = {
+            value: string
+            object: SomeClass
+        }
+        const moduleKey = Symbol('dynamicTestModule')
+        const prefix = 'lorem'
+
+        // Arrange --------
+        const dynamicModule = DIModule.dynamic(
+            moduleKey,
+            () => import('./utils/stubs/dynamicModuleStub'),
+        ).create<ModuleTypeMap>((builder, { someValue, SomeClass }) => {
+            builder.bindInstance('value', someValue)
+            builder.bindFactory('object', c => new SomeClass(prefix + c.get('value')))
+        });
+
+        // Act ------------
+        const container = DIContainer.builder()
+            .addModule(dynamicModule)
+            .build()
+
+        await container.loadModuleAsync(dynamicModule)
+
+        // Asset ----------
+        expect(container.get('value')).toBe('value')
+        expect(container.get('object').value).toBe(prefix + 'value')
     })
 })
