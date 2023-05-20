@@ -1,4 +1,4 @@
-# SPX-DI
+# SpireX DI
 Dependency injection library for JS/TS projects.
 
 ## Why?

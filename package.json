@@ -1,6 +1,6 @@
 {
-  "name": "spx-di",
-  "version": "1.0.0",
+  "name": "@spirex/di",
+  "version": "0.0.1",
   "license": "MIT",
   "author": {
     "name": "Artem Sobolenkov",
