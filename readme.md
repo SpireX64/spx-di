@@ -1,5 +1,5 @@
 # SPX-DI
-Simple dependency injection library for JS/TS projects.
+Dependency injection library for JS/TS projects.
 
 ## Why?
 - Easy and fast integration into a project of any complexity
@@ -22,14 +22,14 @@ Simple dependency injection library for JS/TS projects.
 
 ### Step 1. Type definition.
 Unfortunately JS/TS doesn't have runtime types, you have to define your own type "keys".
-For example, you can use enum:
+For example, you can use string enum:
 
 ```ts
 export enum AppType {
-    AppManager = Symbol('AppManager'),
-    HttpClient = Symbol('HttpClient'),
-    ApiBaseUrl = Symbol('ApiBaseUrl'),
-    Logger = Symbol('Logger'),
+    AppManager = 'AppManager',
+    HttpClient = 'HttpClient',
+    ApiBaseUrl = 'ApiBaseUrl',
+    Logger = 'Logger',
 }
 ```
 
