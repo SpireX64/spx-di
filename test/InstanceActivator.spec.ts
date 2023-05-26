@@ -9,6 +9,7 @@ import InstanceActivator from '../src/internal/InstanceActivator'
 import BindingsRegistrar from '../src/internal/BindingsRegistrar'
 import createResolverMock from './utils/createResolverMock'
 import createBinding from './utils/createBinding'
+import {DynamicModulesManager} from "../lib/modules/DynamicModulesManager";
 
 function createDependencyResolverMock<TypeMap extends object>(override?: Partial<IDependencyResolver<TypeMap>>) {
     const get = jest.fn(override?.get)
@@ -52,12 +53,12 @@ describe('InstanceActivator', () => {
             activator.activate(resolver.mockObject, binding!)
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ---------------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.type).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain('value')
     })
 
@@ -84,8 +85,9 @@ describe('InstanceActivator', () => {
         registrar.register(createBinding('A', { lifecycle: Lifecycle.Transient, factory: r => r.get('B') }), 'bind')
         registrar.register(createBinding('B', { lifecycle: Lifecycle.Transient, factory: r => r.get('A') }), 'bind')
 
+        const moduleManager = new DynamicModulesManager()
         const activator = new InstanceActivator(registrar)
-        const container = new DIContainer(activator)
+        const container = new DIContainer(activator, moduleManager)
 
         let error: DIError | null = null
 
@@ -94,12 +96,12 @@ describe('InstanceActivator', () => {
             container.get('A')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ---------------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.DependencyCycle)
+        expect(error?.type).toBe(DIErrorType.DependencyCycle)
         expect(error?.message).toMatch('A -> B -> A')
     })
 
@@ -108,12 +110,13 @@ describe('InstanceActivator', () => {
         const keyA = 'A'
         const keyB = 'B'
         const name = 'test'
+        const moduleManager = new DynamicModulesManager()
         const registrar = new BindingsRegistrar<{ A: string, B: string }>()
         registrar.register(createBinding(keyA, { name, lifecycle: Lifecycle.Transient, factory: r => r.get(keyB) }), 'bind')
         registrar.register(createBinding(keyB, { lifecycle: Lifecycle.Transient, factory: r => r.get(keyA, name) }), 'bind')
 
         const activator = new InstanceActivator(registrar)
-        const container = new DIContainer(activator)
+        const container = new DIContainer(activator, moduleManager)
 
         let error: DIError | null = null
 
@@ -122,17 +125,18 @@ describe('InstanceActivator', () => {
             container.get(keyA, name)
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ---------------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.DependencyCycle)
+        expect(error?.type).toBe(DIErrorType.DependencyCycle)
         expect(error?.message).toMatch(`${keyA}:${name} -> ${keyB} -> ${keyA}:${name}`)
     })
 
     it('Long dependency cycle', () => {
         // Arrange --------------
+        const moduleManager = new DynamicModulesManager()
         const registrar = new BindingsRegistrar<{ A: string, B: string, C: string, D: string, E: string }>()
         registrar.register(createBinding('B', { lifecycle: Lifecycle.Transient, factory: r => r.get('C') }), 'bind')
         registrar.register(createBinding('A', { lifecycle: Lifecycle.Transient, factory: r => r.get('B') }), 'bind')
@@ -141,7 +145,7 @@ describe('InstanceActivator', () => {
         registrar.register(createBinding('E', { lifecycle: Lifecycle.Transient, factory: r => r.get('A') }), 'bind')
 
         const activator = new InstanceActivator(registrar)
-        const container = new DIContainer(activator)
+        const container = new DIContainer(activator, moduleManager)
         let error: DIError | null = null
 
         // Act ------------------
@@ -149,7 +153,7 @@ describe('InstanceActivator', () => {
             container.get('A')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ---------------

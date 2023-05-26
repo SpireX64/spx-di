@@ -1,7 +1,7 @@
 import Lifecycle from '../Lifecycle'
 import ITypeBinding from '../abstract/ITypeBinding'
 import IDependencyResolver from '../abstract/IDependencyResolver'
-import DIError from '../DIError'
+import { DIError } from '../DIError'
 import IBindingsRepository, { TBindingsFilterPredicate } from '../abstract/IBindingsRepository'
 
 export default class InstanceActivator<TypeMap extends object> implements IBindingsRepository<TypeMap>{

@@ -99,7 +99,7 @@ describe('BindingsRegistrar', () => {
             registrar.register(binding2, 'throw')
         } catch (err) {
             if (err instanceof DIError)
-                error = err
+                error = err as DIError
         }
 
         const bindings = registrar.findAllOf('someNumber')
@@ -108,7 +108,7 @@ describe('BindingsRegistrar', () => {
         expect(bindings.length).toBe(1)
         expect(bindings).toContain(binding1)
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.BindingConflict)
+        expect(error?.type).toBe(DIErrorType.BindingConflict)
     })
 
     it('Multi register type in same scope', () => {
@@ -124,7 +124,7 @@ describe('BindingsRegistrar', () => {
             registrar.register(binding2, 'throw')
         } catch (err) {
             if (err instanceof DIError)
-                error = err
+                error = err as DIError
         }
 
         const bindingsOfType = registrar.findAllOf('someNumber')
@@ -133,7 +133,7 @@ describe('BindingsRegistrar', () => {
         expect(bindingsOfType.length).toBe(1)
         expect(bindingsOfType).toContain(binding1)
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.BindingConflict)
+        expect(error?.type).toBe(DIErrorType.BindingConflict)
     })
 
     it('Find binding by predicate', () => {

@@ -1,7 +1,7 @@
 import IBindingsRepository, { TBindingsFilterPredicate } from '../abstract/IBindingsRepository'
 import ITypeBinding from '../abstract/ITypeBinding'
 import {TConflictResolution} from '../types'
-import DIError from '../DIError'
+import { DIError } from '../DIError'
 import Lifecycle from '../Lifecycle'
 
 export default class BindingsRegistrar<TypeMap extends object> implements IBindingsRepository<TypeMap> {

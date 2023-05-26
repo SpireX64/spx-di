@@ -160,12 +160,12 @@ describe('DIScope', function () {
             scope.get('key', 'B')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert -------
         expect(instance).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(error?.type).toBe(DIErrorType.BindingNotFound)
     })
 
     // GIVEN:
@@ -187,11 +187,11 @@ describe('DIScope', function () {
             scope.get('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert -------
-        expect(error?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(error?.type).toBe(DIErrorType.BindingNotFound)
     })
 
     // GIVEN:
@@ -213,11 +213,11 @@ describe('DIScope', function () {
             scope.getPhantom('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert -------
-        expect(error?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(error?.type).toBe(DIErrorType.BindingNotFound)
     })
 
     // GIVEN:
@@ -356,12 +356,12 @@ describe('DIScope', function () {
             scope.get('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 
     // GIVEN: Scope was created and disposed
@@ -384,12 +384,12 @@ describe('DIScope', function () {
             scope.getAll('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 
     // GIVEN: Scope was created and disposed
@@ -412,12 +412,12 @@ describe('DIScope', function () {
             scope.getProvider('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 
     // GIVEN:
@@ -445,12 +445,12 @@ describe('DIScope', function () {
             instanceProvider()
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 
     // GIVEN: Scope was created and disposed
@@ -473,12 +473,12 @@ describe('DIScope', function () {
             scope.getPhantom('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 
     // GIVEN: Scope was created and disposed
@@ -501,11 +501,11 @@ describe('DIScope', function () {
             scope.getOptional('key')
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ----------
         expect(scope.isDisposed()).toBeTruthy()
-        expect(error?.errorType).toBe(DIErrorType.IllegalClosedScopeAccess)
+        expect(error?.type).toBe(DIErrorType.DisposedScopeAccess)
     })
 });

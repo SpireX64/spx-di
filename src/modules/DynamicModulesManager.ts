@@ -1,5 +1,5 @@
 import type {TDynamicDIModule, TModuleKey} from './DIModule'
-import DIError from "../DIError";
+import { DIError } from '../DIError'
 
 export class DynamicModulesManager {
     private readonly _modulesMap = new Set<TDynamicDIModule<any, unknown>>()

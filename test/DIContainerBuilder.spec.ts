@@ -3,9 +3,9 @@ import {
     DIContainerBuilder,
     DIError,
     DIErrorType,
+    DIModule,
     Lifecycle,
 } from '../src'
-import { DIModule } from '../src/modules/DIModule'
 import type { SomeClass } from './utils/stubs/dynamicModuleStub'
 
 describe('DIContainerBuilder', () => {
@@ -172,7 +172,7 @@ describe('DIContainerBuilder', () => {
             builder.build()
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert ------
@@ -185,7 +185,7 @@ describe('DIContainerBuilder', () => {
         expect(qweBinding).not.toBeNull()
 
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
+        expect(error?.type).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain(requiredMissingType)
     })
 
@@ -200,12 +200,12 @@ describe('DIContainerBuilder', () => {
             builder.bindInstance(key, null!)
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.type).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain(key)
     })
 
@@ -221,12 +221,12 @@ describe('DIContainerBuilder', () => {
             builder.bindInstance(key, null!, { name })
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.type).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain(`${key}:${name}`)
     })
 
@@ -241,11 +241,11 @@ describe('DIContainerBuilder', () => {
             builder.bindFactory(key, null!)
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
         // Assert ------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.type).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain(key)
     })
 
@@ -261,11 +261,11 @@ describe('DIContainerBuilder', () => {
             builder.bindFactory(key, null!, Lifecycle.Singleton, { name })
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
         // Assert ------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.NullableBinding)
+        expect(error?.type).toBe(DIErrorType.NullableBinding)
         expect(error?.message).toContain(`${key}:${name}`)
     })
 
@@ -402,12 +402,12 @@ describe('DIContainerBuilder', () => {
                 .bindFactory('typeKey', () => 2, Lifecycle.LazySingleton)
         } catch (e) {
             if (e instanceof DIError)
-                error = e
+                error = e as DIError
         }
 
         // Assert -----
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.InvalidMultiBinding)
+        expect(error?.type).toBe(DIErrorType.InvalidMultiBinding)
         expect(error?.message).toMatch(`${Lifecycle.LazySingleton} "typeKey"`)
     })
 
@@ -450,13 +450,13 @@ describe('DIContainerBuilder', () => {
             builder.build()
         } catch (err) {
             if (err instanceof DIError) {
-                error = err
+                error = err as DIError
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
+        expect(error?.type).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey')
     })
 
@@ -477,13 +477,13 @@ describe('DIContainerBuilder', () => {
             builder.build()
         } catch (err) {
             if (err instanceof DIError) {
-                error = err
+                error = err as DIError
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
+        expect(error?.type).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey:foo')
     })
 
@@ -502,13 +502,13 @@ describe('DIContainerBuilder', () => {
             builder.build()
         } catch (err) {
             if (err instanceof DIError) {
-                error = err
+                error = err as DIError
             }
         }
 
         // Assert -------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.MissingRequiredType)
+        expect(error?.type).toBe(DIErrorType.MissingRequiredType)
         expect(error?.message).toContain('typeKey')
         expect(error?.message).toContain('"expected"')
     })

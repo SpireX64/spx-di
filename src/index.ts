@@ -1,7 +1,7 @@
 export { default as DIContainer, DIContainerBuilder } from './DIContainer'
 export { isPhantomInstance } from './internal/PhantomInstance'
 export { default as Lifecycle } from './Lifecycle'
-export { default as DIError, DIErrorType } from './DIError'
+export { DIError, DIErrorType } from './DIError'
 export { DIModule } from './modules/DIModule'
 export type { TStaticDIModule, TDynamicDIModule, TModuleKey, TypeMapOfDIModule } from './modules/DIModule'
 export type { TypeMapOfContainer } from './DIContainer'

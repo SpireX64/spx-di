@@ -2,7 +2,7 @@ import ITypeBinding, { checkIsAvailableInScope } from './abstract/ITypeBinding'
 import IDependencyResolver from './abstract/IDependencyResolver'
 import InstanceActivator from './internal/InstanceActivator'
 import DIScope from './internal/DIScope'
-import DIError from './DIError'
+import { DIError } from './DIError'
 import Lifecycle from './Lifecycle'
 import type {
     IScopeDisposable,

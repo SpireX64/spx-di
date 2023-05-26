@@ -11,7 +11,7 @@ import IDependencyResolver from '../abstract/IDependencyResolver'
 import InstanceActivator from './InstanceActivator'
 import ITypeBinding, { checkIsAvailableInScope } from '../abstract/ITypeBinding'
 import { createPhantomInstance } from './PhantomInstance'
-import DIError from '../DIError'
+import { DIError } from '../DIError'
 
 export default class DIScope<TypeMap extends object>
     implements IDependencyResolver<TypeMap>, IDisposable {
@@ -77,7 +77,7 @@ export default class DIScope<TypeMap extends object>
 
     public get<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         if (this._isDisposed)
-            throw DIError.illegalClosedScopeAccess(this.key)
+            throw DIError.disposedScopeAccess(this.key)
 
         const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)
@@ -88,7 +88,7 @@ export default class DIScope<TypeMap extends object>
 
     public getOptional<Type extends keyof TypeMap>(type: Type, name?: TBindingName): TypeMap[Type] | undefined {
         if (this._isDisposed)
-            throw DIError.illegalClosedScopeAccess(this.key)
+            throw DIError.disposedScopeAccess(this.key)
 
         const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)
@@ -113,7 +113,7 @@ export default class DIScope<TypeMap extends object>
 
     public getAll<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): ReadonlyArray<TypeMap[Type]> {
         if (this._isDisposed)
-            throw DIError.illegalClosedScopeAccess(this.key)
+            throw DIError.disposedScopeAccess(this.key)
 
         if (this._parent != null)
             return this._parent.getAll(type, name)
@@ -127,12 +127,12 @@ export default class DIScope<TypeMap extends object>
 
     public getProvider<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TProvider<TypeMap[Type]> {
         if (this._isDisposed)
-            throw DIError.illegalClosedScopeAccess(this.key)
+            throw DIError.disposedScopeAccess(this.key)
 
         const scope = this
         function provider() {
             if (scope.isDisposed())
-                throw DIError.illegalClosedScopeAccess(scope.key)
+                throw DIError.disposedScopeAccess(scope.key)
             return scope.get(type, name)
         }
 
@@ -143,7 +143,7 @@ export default class DIScope<TypeMap extends object>
 
     public getPhantom<Type extends keyof TypeMap>(type: Type, name: TBindingName = null): TypeMap[Type] {
         if (this._isDisposed)
-            throw DIError.illegalClosedScopeAccess(this.key)
+            throw DIError.disposedScopeAccess(this.key)
 
         const binding = this._activator.find(type, it => it.name == name && checkIsAvailableInScope(it.scope, this.key))
         if (binding == null)

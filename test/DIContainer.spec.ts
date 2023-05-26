@@ -21,13 +21,13 @@ describe('DIContainer', function () {
         try {
             container.get('value')
         } catch (err) {
-            if (err instanceof DIError)
-                error = err
+            if (err instanceof  DIError)
+                error = err as DIError
         }
 
         // Assert ------
         expect(error).not.toBeNull()
-        expect(error?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(error?.type).toBe(DIErrorType.BindingNotFound)
         expect(error?.message).toContain('value')
     })
 
@@ -306,7 +306,7 @@ describe('DIContainer', function () {
             container.get('typeKey')
         } catch (err) {
             if (err instanceof DIError)
-                errorAtGlobalScope = err
+                errorAtGlobalScope = err as DIError
         }
 
         const instanceAtAllowedScope = container
@@ -315,7 +315,7 @@ describe('DIContainer', function () {
 
         // Assert ------
         expect(errorAtGlobalScope).not.toBeNull()
-        expect(errorAtGlobalScope?.errorType).toBe(DIErrorType.BindingNotFound)
+        expect(errorAtGlobalScope?.type).toBe(DIErrorType.BindingNotFound)
         expect(instanceAtAllowedScope).not.toBeNull()
     })
 

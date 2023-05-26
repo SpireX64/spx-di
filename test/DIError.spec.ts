@@ -1,4 +1,4 @@
-import {DIError, DIErrorType} from "../src";
+import { DIError, DIErrorType } from '../src'
 
 describe('DIError', () => {
     it('Create DIError instance with constructor', () => {
@@ -6,10 +6,10 @@ describe('DIError', () => {
         const innerError = Error(errorMessage)
         const error = new DIError(DIErrorType.IllegalState, errorMessage, innerError)
 
-        expect(error.errorType).toBe(DIErrorType.IllegalState)
+        expect(error.type).toBe(DIErrorType.IllegalState)
         expect(error.message).toBe(errorMessage)
-        expect(error.innerError).toBe(innerError)
-        expect(error.toString()).toContain(`DIError: ${errorMessage}`)
+        expect(error.cause).toBe(innerError)
+        expect(error.toString()).toContain(`DIError.IllegalState: ${errorMessage}`)
     })
 
     it('Create DIError instance with factory method', () => {
@@ -17,9 +17,9 @@ describe('DIError', () => {
         const innerError = Error(errorMessage)
         const error = DIError.illegalState(errorMessage, innerError)
 
-        expect(error.errorType).toBe(DIErrorType.IllegalState)
+        expect(error.type).toBe(DIErrorType.IllegalState)
         expect(error.message).toBe(errorMessage)
-        expect(error.innerError).toBe(innerError)
-        expect(error.toString()).toContain(`DIError: ${errorMessage}`)
+        expect(error.cause).toBe(innerError)
+        expect(error.toString()).toContain(`DIError.IllegalState: ${errorMessage}`)
     })
 });
