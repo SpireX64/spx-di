@@ -9,6 +9,7 @@ describe('DIError', () => {
         expect(error.type).toBe(DIErrorType.IllegalState)
         expect(error.message).toBe(errorMessage)
         expect(error.cause).toBe(innerError)
+        expect(error.stack).not.toBeUndefined()
         expect(error.toString()).toContain(`DIError.IllegalState: ${errorMessage}`)
     })
 

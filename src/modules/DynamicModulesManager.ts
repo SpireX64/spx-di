@@ -11,12 +11,12 @@ export class DynamicModulesManager {
 
     public async loadModuleAsync(module: TDynamicDIModule<any, unknown>): Promise<void> {
         if (!this._modulesMap.has(module))
-            throw DIError.illegalState('Module not found')
+            throw DIError.illegalState(`Module ${module.key.toString()} not found`)
         try {
             const jsModule = await module.importDelegate()
             this._dynamicModulesCache.set(module.key, jsModule)
         } catch (e) {
-            throw DIError.illegalState('JSModule import failure', e as Error)
+            throw DIError.illegalState(`JSModule import failure: ${module.key.toString()}`, e as Error)
         }
     }
 

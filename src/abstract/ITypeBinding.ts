@@ -36,9 +36,8 @@ export function checkIsAvailableInScope(bindingScope: TScopeKey | readonly TScop
  * Stringify binding type name or instance name
  * @param name - name of type or instance
  */
-export function getStringName(name: string | symbol | number | null): string {
+export function getStringName(name: string | symbol | null): string {
     if (name == null) return '<default>'
-    if (typeof name === 'string') return name
     if (typeof name === 'symbol') return name.description ?? name.toString()
-    return name.toString()
+    return name
 }

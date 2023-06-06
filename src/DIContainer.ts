@@ -258,8 +258,8 @@ export class DIContainerBuilder<TypeMap extends object> implements IContainerCon
                 requireType: moduleConfigurator.requireType.bind(moduleConfigurator),
                 bindInstance: moduleConfigurator.bindInstance.bind(moduleConfigurator),
                 bindFactory: (type, factory, lifecycle, options) => {
-                    if (lifecycle === Lifecycle.Singleton) throw DIError.illegalState('Attempt to bind singleton with dynamic module')
-                    return moduleConfigurator.bindFactory(type, factory, lifecycle ?? Lifecycle.LazySingleton, options)
+                    const safeLifecycle = !lifecycle || lifecycle === Lifecycle.Singleton ? Lifecycle.LazySingleton : lifecycle
+                    return moduleConfigurator.bindFactory(type, factory, safeLifecycle, options)
                 },
             }
             module.buildDelegate(dynamicModuleConfigurator, moduleProxy)

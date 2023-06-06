@@ -549,20 +549,23 @@ describe('DIContainerBuilder', () => {
         expect(() => builder.build()).not.toThrow()
     })
 
-    it('Use dynamic module', () => {
+    it('Adding dynamic module', () => {
         type TypeMap = {
             value: string
             instance: SomeClass,
         }
         // Arrange ------
         const moduleKey = 'asyncModule'
-
+        let dynamicValue: any
         const dynamicModule = DIModule.dynamic(
             moduleKey,
             () => import('./utils/stubs/dynamicModuleStub'),
-        ).create<TypeMap>((builder, { someValue , SomeClass}) => {
-            builder.bindInstance('value', someValue)
-            builder.bindFactory('instance', c => new SomeClass(c.get('value')))
+        ).create<TypeMap>((builder, jsModule) => {
+            // @ts-ignore Resolve dynamic value proxy
+            dynamicValue = jsModule.dynamic
+
+            builder.bindInstance('value', jsModule.someValue)
+            builder.bindFactory('instance', c => new jsModule.SomeClass(c.get('value')))
         })
 
         // Act ----------
@@ -579,5 +582,37 @@ describe('DIContainerBuilder', () => {
 
         expect(bindingFactory).not.toBeNull()
         expect(bindingFactory?.factory).not.toBeNull()
+
+        expect(dynamicValue).not.toBeUndefined()
+        expect(dynamicValue.dynamic).toBeTruthy()
+        expect(dynamicValue.module.key).toBe(moduleKey)
+        expect(dynamicValue.randomThing).toBeUndefined()
+    })
+
+    it('Module with dependencies', () => {
+        // Arrange -------
+        type Module1TypeMap = {
+            first: { value: number }
+        }
+        const module1 = DIModule.static('module1').create<Module1TypeMap>(builder => {
+            builder.bindInstance('first', { value: 42 })
+        })
+
+        type Module2TypeMap = {
+            second: string
+        }
+        const module2 = DIModule.static('module2')
+            .create<Module2TypeMap, Module1TypeMap>(builder => {
+                builder.bindFactory('second', c => c.get('first').value.toString())
+            })
+
+        // Act -----------
+        const builder = DIContainer.builder()
+            .addModule(module1)
+            .addModule(module2)
+
+        // Assert --------
+        expect(builder.find('first')).not.toBeNull()
+        expect(builder.find('second')).not.toBeNull()
     })
 })

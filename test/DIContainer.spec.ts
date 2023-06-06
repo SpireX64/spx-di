@@ -1,5 +1,6 @@
 import {
     DIContainer,
+    DIModule,
     DIError,
     DIErrorType,
     IDisposable,
@@ -8,7 +9,6 @@ import {
     Lifecycle,
     TScopeKey,
 } from '../src'
-import { DIModule } from '../src/modules/DIModule'
 import type { SomeClass } from './utils/stubs/dynamicModuleStub'
 
 describe('DIContainer', function () {
@@ -611,7 +611,7 @@ describe('DIContainer', function () {
         expect(container.get('someNumber')).toBe(expectedNumber)
     })
 
-    it('Add dynamic module', async () => {
+    it('Add and load dynamic module', async () => {
         type ModuleTypeMap = {
             value: string
             object: SomeClass
@@ -623,9 +623,14 @@ describe('DIContainer', function () {
         const dynamicModule = DIModule.dynamic(
             moduleKey,
             () => import('./utils/stubs/dynamicModuleStub'),
-        ).create<ModuleTypeMap>((builder, { someValue, SomeClass }) => {
+        ).create<ModuleTypeMap>((builder, jsModule) => {
+            // Deconstruct support
+            const { SomeClass, someValue } = jsModule
             builder.bindInstance('value', someValue)
             builder.bindFactory('object', c => new SomeClass(prefix + c.get('value')))
+
+            // Direct access support
+            builder.bindFactory('value', () => jsModule.someValue, Lifecycle.Transient, { name: Lifecycle.Transient })
         });
 
         // Act ------------
@@ -637,6 +642,67 @@ describe('DIContainer', function () {
 
         // Asset ----------
         expect(container.get('value')).toBe('value')
+        expect(container.get('value')).toBe(container.get('value', Lifecycle.Transient))
         expect(container.get('object').value).toBe(prefix + 'value')
+    })
+
+    it('Loading a dynamic module with invalid import', async () => {
+        // Arrange ---------
+        const dynamicModule = DIModule.dynamic(
+            'dynamic-module',
+            () => Promise.reject<{ someValue: string }>()
+        ).create<{ value: string }>((builder, { someValue }) =>
+            builder
+                .bindInstance('value', someValue))
+
+        const container = DIContainer.builder()
+            .addModule(dynamicModule)
+            .build()
+
+        // Act ---------
+        let error: DIError | null = null
+        try {
+            await container.loadModuleAsync(dynamicModule)
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e as DIError
+        }
+
+        // Assert ------
+        expect(error).not.toBeNull()
+        expect(error?.type).toBe(DIErrorType.IllegalState)
+        expect(error?.message).toContain(dynamicModule.key)
+    })
+
+    it('Loading an unadded dynamic module', async () => {
+        // Arrange -------
+        type ModuleTypeMap = {
+            value: string
+            object: SomeClass
+        }
+        const moduleKey = Symbol('dynamicTestModule')
+        const dynamicModule = DIModule.dynamic(
+            moduleKey,
+            () => import('./utils/stubs/dynamicModuleStub'),
+        ).create<ModuleTypeMap>((builder, { someValue, SomeClass }) => {
+            builder.bindInstance('value', someValue)
+            builder.bindFactory('object', c => new SomeClass(c.get('value')))
+        });
+        const container = DIContainer.builder().build()
+
+        // Act --------
+        let error: DIError | null = null
+        try {
+            // @ts-ignore Type-check warn about unadded module loading
+            await container.loadModuleAsync(dynamicModule)
+        } catch (e) {
+            if (e instanceof DIError)
+                error = e as DIError
+        }
+
+        // Assert ------
+        expect(error).not.toBeNull()
+        expect(error?.type).toBe(DIErrorType.IllegalState)
+        expect(error?.message).toContain(moduleKey.toString())
     })
 })
